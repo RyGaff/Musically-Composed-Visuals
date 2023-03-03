@@ -12,7 +12,7 @@ through fourier. These components would split songs into components such
 as basslines, vocals, accompaniment, etc.
 
   ---------------------------- ---------------------------- ---------------------------- -- -- --
-  ![image](/imgs/image1.png)    ![image](/imgs/image2.png)   ![image](/imgs/image3.png)        
+  ![image](/Latex/imgs/image1.png)    ![image](/Latex/imgs/image2.png)   ![image](/Latex/imgs/image3.png)        
   ---------------------------- ---------------------------- ---------------------------- -- -- --
 
 # Relevance
