@@ -12,6 +12,7 @@ through fourier. These components would split songs into components such
 as basslines, vocals, accompaniment, etc.
 
   ---------------------------- ---------------------------- ---------------------------- -- -- --
+# Polynomial Julia Set images
   ![image](/Latex/imgs/image1.png)    ![image](/Latex/imgs/image2.png)   ![image](/Latex/imgs/image3.png)        
   ---------------------------- ---------------------------- ---------------------------- -- -- --
 
