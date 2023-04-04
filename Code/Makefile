@@ -1,4 +1,4 @@
 default: main
 
 main: main.c
-	gcc -o main main.c -lglut -lGLU -lGL
+	gcc -o main main.c -lm -lglut -lGLU -lGL
