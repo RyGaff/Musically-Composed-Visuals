@@ -15,7 +15,7 @@ float cIm = IMAGINARY;
 // This is done soe we can use glutGet
 int height;
 int width;
-int MAX_ITERATIONS = 150;
+int max_iterations = 150;
 
 double zoom = 1;
 double mx = 0;
@@ -58,27 +58,30 @@ void julia(double zoom, double mX, double mY)
 
     // algorithm to draw the julia set. 
     // basic pseduo code can be found at https://en.wikipedia.org/wiki/Julia_set
+    double r = random_interval();
 	for (int y = 0; y < height; y++){ // Draws one frame.
 		for (int x = 0; x < width; x++){
 			zx = 1.5 * (x - width / 2) / (0.5 * zoom * width) + mX;
 			zy = (y - height / 2) / (0.5 * zoom * height) + mY;
 
 			int iteration = 0;
-			for (iteration; iteration < MAX_ITERATIONS; iteration++){
+			for (iteration; iteration < max_iterations; iteration++){
 				ox = zx;
 				oy = zy;
-				zx = ox * ox - oy * oy + cRe;
-				zy = 2 * ox * oy + cIm;
+				zx = (ox * ox - oy * oy) + cRe;
+				// zy = (2 * ox * oy + cIm);
+                zy = (ox * oy + ox * oy) + cIm;
 
 				if((zx * zx + zy * zy) > 4) break;
 			}	
-				if(iteration == MAX_ITERATIONS ){
-                // glColor3f( 1.0, 1.0, 1.0 ); // Set color to draw julia
-                glColor3f(0.5, 1.0, 1.0); // Set color to draw julia
+				if(iteration == max_iterations ){
+                glColor3f( ox * oy, 1.0, 1.0 ); // Set color to draw julia
+                // glColor3f(ox + oy, oy, abs(ox-oy)); // Set the color of everything not part of the julia set
                 glVertex2i( x, y );
 			}
             else {
-                glColor3f( 0.0, 0.0, 0.0 ); // Set the color of everything not part of the julia set
+                // glColor3f(abs(oy -ox), ox, ox + oy); // Set color to draw julia
+                glColor3f(abs(ox-oy) + 0.1,0.0,abs(ox-oy) + .01);
                 glVertex2i( x, y );
             }
 		}
@@ -88,15 +91,14 @@ void julia(double zoom, double mX, double mY)
 }
 
 void animate(){
-    double old_time = t;
-    t = clock();
-    double delta_time = t - old_time;
+  
     if (animation == 1){
-        // cRe = sin(cRe + (clock()/CLOCKS_PER_SEC) * 0.001);
-        cRe = cRe + 0.03 * sin(delta_time);
-        cIm = cIm + 0.03 * cos(delta_time);
-        // cIm = cos(cIm + (clock()/CLOCKS_PER_SEC) * 0.001);
-    
+        double old_time = t;
+        t = clock();
+        double delta_time = t - old_time;
+
+        cRe = cRe + 0.005 * sin(delta_time);
+        cIm = cIm + 0.005 * cos(delta_time); 
     }
     display();
 }
@@ -125,11 +127,11 @@ void key_listener(unsigned char key, int x, int y){
             exit(0);
             break;
         case 'w':
-            MAX_ITERATIONS += 10;
+            max_iterations += 10;
             break;
         case 's':
-            if (MAX_ITERATIONS > 0){
-                MAX_ITERATIONS -= 10;
+            if (max_iterations > 0){
+                max_iterations -= 10;
             }
             break;
         //Adjust real
@@ -153,9 +155,26 @@ void key_listener(unsigned char key, int x, int y){
                 animation = 0;
             }
             break;
+        case '.': // Right arrow
+            mx += .1;
+            break;
+        case ',': // Left Arrow
+            mx -= .1;
+            break;
+        case '\'': // Up arrow
+            my += .1;
+            break;
+        case '/': // Down arrow
+            my -= .1;
+            break;
+        case '=':
+            zoom += .1;
+            break;
+        case '-':
+            zoom -= .1;
+            break;
         default:
             printf("Key id_%d is not a valid input\n", key);
-
             printf("Valid keys:\n\
             q = exit\n\
             w = increment iterations by 10\n\
@@ -168,7 +187,8 @@ void key_listener(unsigned char key, int x, int y){
             ");
             return;
     }
-    printf("Iterations %d   real = %f   imaginary = %f   animation = %d\n", MAX_ITERATIONS, cRe, cIm, animation);
+    printf("Iterations %d   real = %f   imaginary = %f   animation = %d\n", max_iterations, cRe, cIm, animation);
+
 }
 
 
