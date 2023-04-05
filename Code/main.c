@@ -115,8 +115,7 @@ void display()
     glOrtho( 0, width, 0, height, -1, 1 );
     glMatrixMode( GL_MODELVIEW );
     glLoadIdentity();
-
-    //TODO Allow the (zoom, mx, my) parameters to be changed via user input or some other method
+    
     julia(zoom, mx, my);
     glutSwapBuffers();
 }
@@ -145,32 +144,32 @@ void key_listener(unsigned char key, int x, int y){
         case 'i':
             cIm += .01;
             break;
-        case 'k':
+        case 'k': 
             cIm -= .01;
             break;
-        case 32: // Spacebar
+        case 32: // Spacebar / Toggle animation
             if (animation == 0){
                 animation = 1;
             } else {
                 animation = 0;
             }
             break;
-        case '.': // Right arrow
+        case '.': // Pan Camera Right
             mx += .1;
             break;
-        case ',': // Left Arrow
+        case ',': // Pan Camera Left
             mx -= .1;
             break;
-        case '\'': // Up arrow
+        case '\'': // Pan Camera Up
             my += .1;
             break;
-        case '/': // Down arrow
+        case '/': // Pan Camera Down
             my -= .1;
             break;
-        case '=':
+        case '=': // Zoom Camera In 
             zoom += .1;
             break;
-        case '-':
+        case '-': // Zoom Camera Out
             zoom -= .1;
             break;
         default:
