@@ -3,6 +3,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <GL/glut.h>
+#include <GL/freeglut.h>
 #include <time.h>
 
 // Default starting values for cRe and cIm
@@ -30,12 +31,14 @@ void display();
 void animate();
 void julia(double zoom, double mX, double mY);
 void key_listener(unsigned char key, int x, int y);
+void arrow_listener(int key, int x, int y);
 double random_interval() {return (double)rand()/(double)RAND_MAX;}
+void print_stats();
 
 int main( int argc, char** argv )
 {
     glutInit( &argc, argv );
-    glutInitDisplayMode( GLUT_DOUBLE | GLUT_RGBA );
+    glutInitDisplayMode( GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
     glutInitWindowSize( 1000, 1000);
     glutInitWindowPosition(950,0);
     glutCreateWindow( "Julia" );
@@ -43,6 +46,7 @@ int main( int argc, char** argv )
     glutDisplayFunc(animate);
     glutIdleFunc(animate);
     glutKeyboardFunc(key_listener);
+    glutSpecialFunc(arrow_listener);
     glutMainLoop();
     return 0;
 }
@@ -58,7 +62,7 @@ void julia(double zoom, double mX, double mY)
 
     // algorithm to draw the julia set. 
     // basic pseduo code can be found at https://en.wikipedia.org/wiki/Julia_set
-    double r = random_interval();
+    // Note this algorithm is modified
 	for (int y = 0; y < height; y++){ // Draws one frame.
 		for (int x = 0; x < width; x++){
 			zx = 1.5 * (x - width / 2) / (0.5 * zoom * width) + mX;
@@ -74,14 +78,15 @@ void julia(double zoom, double mX, double mY)
 
 				if((zx * zx + zy * zy) > 4) break;
 			}	
-				if(iteration == max_iterations ){
-                glColor3f( ox * oy, 1.0, 1.0 ); // Set color to draw julia
+				if(iteration == max_iterations ){// Set color to draw julia
+                glColor3f( oy, zx - zy, oy-ox); 
                 // glColor3f(ox + oy, oy, abs(ox-oy)); // Set the color of everything not part of the julia set
                 glVertex2i( x, y );
 			}
-            else {
-                // glColor3f(abs(oy -ox), ox, ox + oy); // Set color to draw julia
-                glColor3f(abs(ox-oy) + 0.1,0.0,abs(ox-oy) + .01);
+            else { // Set color to draw pixels not apart of julia
+                glColor3f(0.0,0.0,0.0);
+                // glColor3f(abs(oy -ox), ox, ox + oy);
+                // glColor3f(abs(ox-oy) + 0.1,0.0,abs(ox-oy) + .01);
                 glVertex2i( x, y );
             }
 		}
@@ -115,7 +120,7 @@ void display()
     glOrtho( 0, width, 0, height, -1, 1 );
     glMatrixMode( GL_MODELVIEW );
     glLoadIdentity();
-    
+
     julia(zoom, mx, my);
     glutSwapBuffers();
 }
@@ -154,18 +159,6 @@ void key_listener(unsigned char key, int x, int y){
                 animation = 0;
             }
             break;
-        case '.': // Pan Camera Right
-            mx += .1;
-            break;
-        case ',': // Pan Camera Left
-            mx -= .1;
-            break;
-        case '\'': // Pan Camera Up
-            my += .1;
-            break;
-        case '/': // Pan Camera Down
-            my -= .1;
-            break;
         case '=': // Zoom Camera In 
             zoom += .1;
             break;
@@ -173,7 +166,7 @@ void key_listener(unsigned char key, int x, int y){
             zoom -= .1;
             break;
         default:
-            printf("Key id_%d is not a valid input\n", key);
+            // printf("Key id_%d is not a valid input\n", key);
             printf("Valid keys:\n\
             q = exit\n\
             w = increment iterations by 10\n\
@@ -183,12 +176,38 @@ void key_listener(unsigned char key, int x, int y){
             i = increment imaginary by .01\n\
             k = decrement imaginary by .01\n\
             space = enable/disable animation\n\
+            = = zoom in\n - = zoom out\n\
+            ArrowKeys to pan camera in a direction\n\
             ");
             return;
     }
-    printf("Iterations %d   real = %f   imaginary = %f   animation = %d\n", max_iterations, cRe, cIm, animation);
+
+    // printf("Iterations %d", max_iterations);
+    print_stats();
 
 }
 
+void arrow_listener(int key, int x, int y){
+    switch(key){
+        case GLUT_KEY_LEFT:
+            mx -= .1;
+            break;
+        case GLUT_KEY_RIGHT:
+            mx += .1;
+            break;
+        case GLUT_KEY_UP:
+            my += .1;
+            break;
+        case GLUT_KEY_DOWN:
+            my -= .1;
+            break;
+    }
 
+    print_stats();
+}
+
+void print_stats(){
+printf("Iterations %d   real = %f   imaginary = %f   animation = %d\n", max_iterations, cRe, cIm, animation);
+printf("    Camera: pos = %f, %f   zoom = %f\n", mx,my,zoom);
+}
 
