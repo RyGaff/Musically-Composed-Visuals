@@ -85,7 +85,6 @@ void julia(double zoom, double mX, double mY)
 				zx = (ox * ox - oy * oy) + cRe;
 				// zy = (2 * ox * oy + cIm);
                 zy = (ox * oy + ox * oy) + cIm;
-
 				if((zx * zx + zy * zy) > 4) break;
 			}	
 				if(iteration == max_iterations ){// Set color to draw julia
@@ -116,8 +115,9 @@ void animate(){
         t = clock();
         double delta_time = (t - old_time);
 
-        cRe = (cRe +  buf[0]/1000000) + 0.005 * sin(delta_time/zoom);
-        cIm = (cIm +  buf[1]/10000000) + 0.005 * cos(delta_time/zoom); 
+        cRe = (cRe +buf[0]/1000000) + 0.005 * sin(delta_time/zoom);
+        cIm = (cIm +buf[1]/10000000) + 0.005 * cos(delta_time/zoom); 
+
         // printf("test %f  %f\n", cRe, cIm);
         br = .01 * remainder(buf[0],step_To_Seek) / 255;
         bg = .01 * remainder(buf[1],step_To_Seek) / 255;
