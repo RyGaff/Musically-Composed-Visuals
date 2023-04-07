@@ -195,7 +195,7 @@ void plotOutputData(){
 void writeDataToCSVFile(const vector<complex<double>>& out, const string fileName = "coords.csv"){
     ofstream outFile(fileName);
 
-    outFile << "x,y" << "\n";
+    // outFile << "x,y" << "\n";
 
     for(complex<double> i : out){
         outFile << i.real() << "," << i.imag() << "\n";
