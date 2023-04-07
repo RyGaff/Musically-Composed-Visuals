@@ -2,9 +2,11 @@
 // #include <glm/glm.hpp>
 #include <math.h>
 #include <stdio.h>
+#include <string.h>
 #include <GL/glut.h>
 #include <GL/freeglut.h>
 #include <time.h>
+
 
 // Default starting values for cRe and cIm
 float const REAL = -0.7;
@@ -26,6 +28,11 @@ int animation = 0;
 double t = 0.0;
 int frame = 0;
 
+int step_To_Seek = 0;
+
+//Background color;
+float br = 0.0, bg = 0.0, bb = 0.0;
+
 double random_interval();
 void display();
 void animate();
@@ -34,9 +41,12 @@ void key_listener(unsigned char key, int x, int y);
 void arrow_listener(int key, int x, int y);
 double random_interval() {return (double)rand()/(double)RAND_MAX;}
 void print_stats();
+double* csv_to_array(char* file); 
 
 int main( int argc, char** argv )
 {
+    csv_to_array("cat.csv");
+
     glutInit( &argc, argv );
     glutInitDisplayMode( GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
     glutInitWindowSize( 1000, 1000);
@@ -84,7 +94,7 @@ void julia(double zoom, double mX, double mY)
                 glVertex2i( x, y );
 			}
             else { // Set color to draw pixels not apart of julia
-                glColor3f(0.0,0.0,0.0);
+                glColor3f(br,bg,bb);
                 // glColor3f(abs(oy -ox), ox, ox + oy);
                 // glColor3f(abs(ox-oy) + 0.1,0.0,abs(ox-oy) + .01);
                 glVertex2i( x, y );
@@ -97,13 +107,33 @@ void julia(double zoom, double mX, double mY)
 
 void animate(){
   
-    if (animation == 1){
+    if (animation == 1){ 
+        
+        double *buf;
+        buf = csv_to_array("cat.csv");
+
         double old_time = t;
         t = clock();
-        double delta_time = t - old_time;
+        double delta_time = (t - old_time);
 
-        cRe = cRe + 0.005 * sin(delta_time);
-        cIm = cIm + 0.005 * cos(delta_time); 
+        cRe = (cRe +  buf[0]/1000000) + 0.005 * sin(delta_time/zoom);
+        cIm = (cIm +  buf[1]/10000000) + 0.005 * cos(delta_time/zoom); 
+        // printf("test %f  %f\n", cRe, cIm);
+        br = .01 * remainder(buf[0],step_To_Seek) / 255;
+        bg = .01 * remainder(buf[1],step_To_Seek) / 255;
+        bb = .01 * remainder(cRe, cIm)/255;
+
+
+
+        // cRe = (cRe / (buf[0] + .00001)) + 0.005 * sin(delta_time/zoom);
+        // cIm = (cIm / (buf[1] + .00001)) + 0.005 * cos(delta_time/zoom);
+
+
+        // char result[50];
+        // for (int i = 0; i < 2; i++){
+        //     // sprintf(result, "%f", buf[i]);
+        //     printf("Results = %f    ", buf[i]);
+        // }
     }
     display();
 }
@@ -207,7 +237,80 @@ void arrow_listener(int key, int x, int y){
 }
 
 void print_stats(){
-printf("Iterations %d   real = %f   imaginary = %f   animation = %d\n", max_iterations, cRe, cIm, animation);
-printf("    Camera: pos = %f, %f   zoom = %f\n", mx,my,zoom);
+    printf("Iterations %d   real = %f   imaginary = %f   animation = %d\n", max_iterations, cRe, cIm, animation);
+    printf("    Camera: pos = %f, %f   zoom = %f\n", mx,my,zoom);
 }
 
+double* csv_to_array(char *file){
+    static double ret[2];
+    FILE *fp;
+    fp = fopen(file, "r");
+    if (!fp){
+        puts("File Not Found");
+        exit(EXIT_FAILURE);
+    }
+
+    fseek(fp, step_To_Seek, SEEK_SET);
+    char *token;
+    char buffer[200];
+    
+    fgets(buffer, 200, fp);
+    token = strtok(buffer, ",");
+    int i = 0;
+    int len = 0;
+    while (token != NULL){
+        // printf("Token = %s", token);
+        len += strlen(token);
+        ret[i] = strtod(token, &token);
+        token = strtok(NULL, ",");
+        i += 1;
+    }
+
+    step_To_Seek = (len + step_To_Seek) % 4126;
+
+    return ret;
+}
+// void csv_to_array(char* file, int step){
+//     // Open the file
+//     FILE *fp;
+//     fp = fopen(file, "r");
+//     if (!fp){
+//         puts("File Not found");
+//         exit(EXIT_FAILURE);
+//     }
+
+//     // Get the number of values in the csv
+//     int num_values = 0;
+//     char c;
+//     while (!feof(fp)){
+//         c = fgetc(fp);
+//         if ( c == ','){
+//             num_values += 2;
+//         }
+//     }
+//     num_values -= 2; 
+//     fseek(fp, 0, SEEK_SET);
+
+
+//     int len = 100;
+//     char buffer[len];
+//     double values[num_values];
+//     int linenum = 0;
+
+//     while (fgets(buffer, len, fp)){
+//         if (linenum > 0){ // Skip the title
+//             printf("%s\n", buffer);
+//             char *token;
+//             token = strtok(buffer, ",");
+
+//             while (token != NULL){
+//                 printf("    token = %s", token);
+//                 token = strtok(NULL, ",");
+//             }
+//         }
+//         linenum += 1;
+//     }
+
+//     fclose(fp);
+
+// }
