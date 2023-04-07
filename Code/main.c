@@ -26,7 +26,6 @@ double my = 0;
 
 int animation = 0;
 double t = 0.0;
-int frame = 0;
 
 int step_To_Seek = 0;
 
@@ -100,7 +99,6 @@ void julia(double zoom, double mX, double mY)
             }
 		}
 	}
-    frame += 1;
     glEnd();
 }
 
@@ -270,47 +268,3 @@ double* csv_to_array(char *file){
 
     return ret;
 }
-// void csv_to_array(char* file, int step){
-//     // Open the file
-//     FILE *fp;
-//     fp = fopen(file, "r");
-//     if (!fp){
-//         puts("File Not found");
-//         exit(EXIT_FAILURE);
-//     }
-
-//     // Get the number of values in the csv
-//     int num_values = 0;
-//     char c;
-//     while (!feof(fp)){
-//         c = fgetc(fp);
-//         if ( c == ','){
-//             num_values += 2;
-//         }
-//     }
-//     num_values -= 2; 
-//     fseek(fp, 0, SEEK_SET);
-
-
-//     int len = 100;
-//     char buffer[len];
-//     double values[num_values];
-//     int linenum = 0;
-
-//     while (fgets(buffer, len, fp)){
-//         if (linenum > 0){ // Skip the title
-//             printf("%s\n", buffer);
-//             char *token;
-//             token = strtok(buffer, ",");
-
-//             while (token != NULL){
-//                 printf("    token = %s", token);
-//                 token = strtok(NULL, ",");
-//             }
-//         }
-//         linenum += 1;
-//     }
-
-//     fclose(fp);
-
-// }
