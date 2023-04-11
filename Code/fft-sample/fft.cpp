@@ -242,7 +242,14 @@ void plotOutputData(){
     system("python3 ./python-stuffs/plotter.py");
 }
 
+void normalizeCSVFile(const vector<cd>& out, double max_real, double max_imag, const string fileName = "coords.csv"){
+    ofstream outFile("normalized_" + fileName);
+    for (complex<double> i : out){
+        outFile << i.real()/max_real << "," << i.imag()/max_imag << "\n";
+    }
+    outFile.close();
 
+}
 /*
  * Write data to a CSV file
  *
@@ -255,16 +262,28 @@ int writeDataToCSVFile(const vector<complex<double>>& out, const string fileName
     ofstream outFile(fileName);
     outFile << "x,y" << "\n";
     int count = 0;
+    double max_real = numeric_limits<double>::min();
+    double max_imag = numeric_limits<double>::min();
     for(complex<double> i : out){
         count++;
         outFile << i.real() << "," << i.imag() << "\n";
+
+        if (i.real() > max_real){
+            max_real = i.real();
+        } 
+        if (i.imag() > max_imag){
+            max_imag = i.imag();
+        }
     }
 
     outFile.close();
 
     // plotOutputData();
+    normalizeCSVFile(out, max_real, max_imag, fileName);
     return count;
 }
+
+
 
 int main(int argc,const char** argv){
 
