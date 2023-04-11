@@ -1,11 +1,7 @@
-// #define GLM_FORCE_CUDA
-// #include <glm/glm.hpp>
-#include <math.h>
-#include <stdio.h>
-#include <string.h>
-#include <GL/glut.h>
-#include <GL/freeglut.h>
-#include <time.h>
+#include "dependencies.h"
+#include "gl_helper.h"
+#include "cuda_gl_interop.h"
+
 
 
 // Default starting values for cRe and cIm
@@ -16,8 +12,8 @@ float cIm = IMAGINARY;
 
 // Dimensions of the window are set in the display function
 // This is done soe we can use glutGet
-int height;
-int width;
+int const height = 1024;
+int const width = 1024;
 int max_iterations = 150;
 
 double zoom = 1;
@@ -27,28 +23,36 @@ double my = 0;
 int animation = 0;
 double t = 0.0;
 
-int step_To_Seek = 0;
+int Step_To_Seek = 0;
 
 //Background color;
 float br = 0.0, bg = 0.0, bb = 0.0;
+// GLubyte* pixels;
+// float pixels[1024][1024][3];
+// uchar4 pixels[width * height * 4];
+// uchar4 *pixels;
 
-double random_interval();
+float *pixels;
+// unsigned char *pixels;
+// uchar4 *pixels;
+
+// float ***pixels;
+
 void display();
 void animate();
 void julia(double zoom, double mX, double mY);
 void key_listener(unsigned char key, int x, int y);
 void arrow_listener(int key, int x, int y);
-double random_interval() {return (double)rand()/(double)RAND_MAX;}
 void print_stats();
 double* csv_to_array(char* file); 
 
 int main( int argc, char** argv )
 {
-    csv_to_array("cat.csv");
-
+    // csv_to_array("cat.csv");
+    pixels = calloc(width * height * 4, sizeof(pixels));
     glutInit( &argc, argv );
-    glutInitDisplayMode( GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
-    glutInitWindowSize( 1000, 1000);
+    glutInitDisplayMode( GLUT_DOUBLE | GLUT_RGBA);
+    glutInitWindowSize( width, height);
     glutInitWindowPosition(950,0);
     glutCreateWindow( "Julia" );
 
@@ -57,6 +61,7 @@ int main( int argc, char** argv )
     glutKeyboardFunc(key_listener);
     glutSpecialFunc(arrow_listener);
     glutMainLoop();
+    free(pixels);
     return 0;
 }
 
@@ -65,7 +70,7 @@ void julia(double zoom, double mX, double mY)
     
 	double zx, zy, ox, oy;
 
-    glBegin( GL_POINTS ); // start drawing in single pixel mode, 
+    // glBegin( GL_POINTS ); // start drawing in single pixel mode, 
     // KILLS performance but should be easily parallizable with cuda I hope
     // If failure to parallelize with cuda with draw with triangles and textures instead
 
@@ -73,33 +78,55 @@ void julia(double zoom, double mX, double mY)
     // basic pseduo code can be found at https://en.wikipedia.org/wiki/Julia_set
     // Note this algorithm is modified
 	for (int y = 0; y < height; y++){ // Draws one frame.
+        // unsigned long long offset = y * 1024;
 		for (int x = 0; x < width; x++){
+            // printf("offset = %d\n", offset);
 			zx = 1.5 * (x - width / 2) / (0.5 * zoom * width) + mX;
 			zy = (y - height / 2) / (0.5 * zoom * height) + mY;
-
+            // int offset = x + y * 64 * 16;
+            int offset = (y * width) + x;
 			int iteration = 0;
-			for (iteration; iteration < max_iterations; iteration++){
+			// for (iteration; iteration < max_iterations; iteration++){
+            while (iteration < max_iterations){
 				ox = zx;
 				oy = zy;
 				zx = (ox * ox - oy * oy) + cRe;
-				// zy = (2 * ox * oy + cIm);
                 zy = (ox * oy + ox * oy) + cIm;
-				if((zx * zx + zy * zy) > 4) break;
+				if((zx * zx + zy * zy) > 4){
+                    pixels[y * width * 4 + x * 4 + 0] = 0.0;
+                    pixels[y * width * 4 + x * 4 + 1] = 0.0;
+                    pixels[y * width * 4 + x * 4 + 2] = 0.0;
+                    pixels[y * width * 4 + x * 4 + 3] = 1.0;
+
+                    // pixels[offset].x = 0;
+                    // pixels[offset].y = 0;
+                    // pixels[offset].z = 0;
+                    // pixels[offset].w = 255;
+                    break;
+                }
+                iteration++;
 			}	
-				if(iteration == max_iterations ){// Set color to draw julia
-                glColor3f( oy, zx - zy, oy-ox); 
-                // glColor3f(ox + oy, oy, abs(ox-oy)); // Set the color of everything not part of the julia set
-                glVertex2i( x, y );
+            // offset++;
+
+			if(iteration == max_iterations ){// Set color to draw julia
+                pixels[y * width * 4 + x * 4 + 0] = oy;
+                pixels[y * width * 4 + x * 4 + 1] = (zx-zy);
+                pixels[y * width * 4 + x * 4 + 2] = (oy-ox);
+                pixels[y * width * 4 + x * 4 + 3] = 1.0;
+
+                // pixels[offset].x = (unsigned char) 255 * oy;
+                // pixels[offset].y = (unsigned char) 255 * (zx-zy);
+                // pixels[offset].z = (unsigned char) 255 * (oy-ox);
+                // pixels[offset].w = 255 * 1.0;
+
+                // pixels[offset].x = (unsigned char) 255 * 1;
+                // pixels[offset].y = (unsigned char) 255 * oy;
+                // pixels[offset].z = (unsigned char) 255 * ox;
+                // pixels[offset].w = 255 * 1.0;
+            
 			}
-            else { // Set color to draw pixels not apart of julia
-                glColor3f(br,bg,bb);
-                // glColor3f(abs(oy -ox), ox, ox + oy);
-                // glColor3f(abs(ox-oy) + 0.1,0.0,abs(ox-oy) + .01);
-                glVertex2i( x, y );
-            }
 		}
 	}
-    glEnd();
 }
 
 void animate(){
@@ -113,49 +140,44 @@ void animate(){
         t = clock();
         double delta_time = (t - old_time);
 
-        cRe = (cRe +buf[0]/1000000) + 0.005 * sin(delta_time/zoom);
-        cIm = (cIm +buf[1]/10000000) + 0.005 * cos(delta_time/zoom); 
+        cRe = (cRe + buf[0]/10000000)  + 0.005 * sin(delta_time/zoom);
+        cIm = (cIm + buf[1]/100000000) + 0.005 * cos(delta_time/zoom); 
 
+        // br = .01 * remainder(buf[0],step_To_Seek) / 255;
+        // bg = .01 * remainder(buf[1],step_To_Seek) / 255;
+        // bb = .01 * remainder(cRe, cIm)/255;
+        print_stats();
+
+        // cRe = (cRe ) + 0.0001 * sin(delta_time + 10);
+        // cIm = (cIm ) + 0.0001 * cos(delta_time + 10); 
         // printf("test %f  %f\n", cRe, cIm);
-        br = .01 * remainder(buf[0],step_To_Seek) / 255;
-        bg = .01 * remainder(buf[1],step_To_Seek) / 255;
-        bb = .01 * remainder(cRe, cIm)/255;
+        // br = .01 * remainder(buf[0],step_To_Seek) / 255;
+        // bg = .01 * remainder(buf[1],step_To_Seek) / 255;
+        // bb = .01 * remainder(cRe, cIm)/255;
 
-
-
-        // cRe = (cRe / (buf[0] + .00001)) + 0.005 * sin(delta_time/zoom);
-        // cIm = (cIm / (buf[1] + .00001)) + 0.005 * cos(delta_time/zoom);
-
-
-        // char result[50];
-        // for (int i = 0; i < 2; i++){
-        //     // sprintf(result, "%f", buf[i]);
-        //     printf("Results = %f    ", buf[i]);
-        // }
     }
     display();
 }
 
 void display()
 {
-    height = glutGet( GLUT_WINDOW_HEIGHT );
-    width = glutGet( GLUT_WINDOW_WIDTH );
+    // height = glutGet( GLUT_WINDOW_HEIGHT );
+    // width = glutGet( GLUT_WINDOW_WIDTH );
 
-    glClearColor(0.0, 0.0, 0.0, 0.0);
+    glClearColor(0.0, 0.0, 0.0, 1.0);
     glClear( GL_COLOR_BUFFER_BIT );
-    glMatrixMode( GL_PROJECTION );
-    glLoadIdentity();
-    glOrtho( 0, width, 0, height, -1, 1 );
-    glMatrixMode( GL_MODELVIEW );
-    glLoadIdentity();
-
+    // glDrawPixels(width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+    glDrawPixels(width, height, GL_RGBA, GL_FLOAT, pixels);
+    // glDrawPixels(width, height, GL_RGBA, GL_DOUBLE, pixels);
     julia(zoom, mx, my);
+
     glutSwapBuffers();
 }
 
 void key_listener(unsigned char key, int x, int y){
     switch(key){
         case 'q':
+            free(pixels);
             exit(0);
             break;
         case 'w':
@@ -248,7 +270,7 @@ double* csv_to_array(char *file){
         exit(EXIT_FAILURE);
     }
 
-    fseek(fp, step_To_Seek, SEEK_SET);
+    fseek(fp, Step_To_Seek, SEEK_SET);
     char *token;
     char buffer[200];
     
@@ -264,7 +286,7 @@ double* csv_to_array(char *file){
         i += 1;
     }
 
-    step_To_Seek = (len + step_To_Seek) % 4126;
+    Step_To_Seek = (len + Step_To_Seek) % 4126;
 
     return ret;
 }
