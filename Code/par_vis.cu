@@ -15,10 +15,11 @@ int animation = 0;
 int Step_To_Seek = 0;
 
 GPUAnimBitmap *bitmap_Ptr;
+unsigned int frames = 0;
 
 void key_listener(unsigned char key, int x, int y);
 void arrow_listener(int key, int x, int y);
-void print_stats();
+void print_stats(float render_time);
 double* csv_to_array(char* file); 
 
 __global__
@@ -68,9 +69,9 @@ double cRe, double cIm, double mX, double mY, double zoom) {
 		// pixels[offset].z = (unsigned char) 255 * (oy - ox);
         // pixels[offset].w = 255;
 
-        pixels[offset].x = (unsigned char) 255 * 1;
-		pixels[offset].y = (unsigned char) 255 * oy;
-		pixels[offset].z = (unsigned char) 255 * ox;
+        pixels[offset].x = (unsigned char) 255 * 0;
+		pixels[offset].y = (unsigned char) 255 * (ox*ox);
+		pixels[offset].z = (unsigned char) 255 * oy;
         pixels[offset].w = 255;
 
 	}
@@ -94,11 +95,16 @@ void generateFrame(uchar4 *ptr) {
         // br = .01 * remainder(buf[0],step_To_Seek) / 255;
         // bg = .01 * remainder(buf[1],step_To_Seek) / 255;
         // bb = .01 * remainder(cRe, cIm)/255;
-        print_stats();
+        // print_stats();
     }
 
+    START_TIMER(julia);
 	julia<<<grids, threads>>>(ptr, max_iterations, cRe, cIm, mx, my, zoom);
+    cudaDeviceSynchronize();
+    STOP_TIMER(julia);
+    print_stats(GET_TIMER(julia));
     // julia(ptr, max_iterations, cRe, cIm, mx, my, zoom);
+    frames++;
 }
 
 int main(void) {
@@ -115,7 +121,7 @@ void key_listener(unsigned char key, int x, int y){
     switch(key){
         case 'q':
             // Free our buffers and cuda mem
-            // bitmap_Ptr->free_resources();
+            bitmap_Ptr->free_resources();
             exit(0);
             break;
         case 'w':
@@ -169,7 +175,7 @@ void key_listener(unsigned char key, int x, int y){
             ");
             return;
     }
-        print_stats();
+        // print_stats();
 
     }
 
@@ -188,10 +194,11 @@ void arrow_listener(int key, int x, int y){
             my -= .1;
             break;
     }
-    print_stats();
+    // print_stats();
 }
 
-void print_stats(){
+void print_stats(float render_time){
+    printf("Time To Render = %f:\n", render_time);
     printf("Iterations %d   real = %f   imaginary = %f   animation = %d\n", max_iterations, cRe, cIm, animation);
     printf("    Camera: pos = %f, %f   zoom = %f\n", mx,my,zoom);
 }

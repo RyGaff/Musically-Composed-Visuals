@@ -24,6 +24,7 @@ int animation = 0;
 double t = 0.0;
 
 int Step_To_Seek = 0;
+unsigned int frames = 0;
 
 //Background color;
 float br = 0.0, bg = 0.0, bb = 0.0;
@@ -43,7 +44,7 @@ void animate();
 void julia(double zoom, double mX, double mY);
 void key_listener(unsigned char key, int x, int y);
 void arrow_listener(int key, int x, int y);
-void print_stats();
+void print_stats(float render_time);
 double* csv_to_array(char* file); 
 
 int main( int argc, char** argv )
@@ -109,9 +110,9 @@ void julia(double zoom, double mX, double mY)
             // offset++;
 
 			if(iteration == max_iterations ){// Set color to draw julia
-                pixels[y * width * 4 + x * 4 + 0] = oy;
-                pixels[y * width * 4 + x * 4 + 1] = (zx-zy);
-                pixels[y * width * 4 + x * 4 + 2] = (oy-ox);
+                pixels[y * width * 4 + x * 4 + 0] = 0;
+                pixels[y * width * 4 + x * 4 + 1] = ox*ox;
+                pixels[y * width * 4 + x * 4 + 2] = oy;
                 pixels[y * width * 4 + x * 4 + 3] = 1.0;
 
                 // pixels[offset].x = (unsigned char) 255 * oy;
@@ -146,7 +147,7 @@ void animate(){
         // br = .01 * remainder(buf[0],step_To_Seek) / 255;
         // bg = .01 * remainder(buf[1],step_To_Seek) / 255;
         // bb = .01 * remainder(cRe, cIm)/255;
-        print_stats();
+        // print_stats();
 
         // cRe = (cRe ) + 0.0001 * sin(delta_time + 10);
         // cIm = (cIm ) + 0.0001 * cos(delta_time + 10); 
@@ -169,7 +170,12 @@ void display()
     // glDrawPixels(width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
     glDrawPixels(width, height, GL_RGBA, GL_FLOAT, pixels);
     // glDrawPixels(width, height, GL_RGBA, GL_DOUBLE, pixels);
+    START_TIMER(julia);
     julia(zoom, mx, my);
+    STOP_TIMER(julia);
+    print_stats(GET_TIMER(julia));
+    
+    // frames++;
 
     glutSwapBuffers();
 }
@@ -233,7 +239,7 @@ void key_listener(unsigned char key, int x, int y){
     }
 
     // printf("Iterations %d", max_iterations);
-    print_stats();
+    // print_stats();
 
 }
 
@@ -253,10 +259,11 @@ void arrow_listener(int key, int x, int y){
             break;
     }
 
-    print_stats();
+    // print_stats();
 }
 
-void print_stats(){
+void print_stats(float render_time){
+    printf("Time To Render = %f:\n", render_time);
     printf("Iterations %d   real = %f   imaginary = %f   animation = %d\n", max_iterations, cRe, cIm, animation);
     printf("    Camera: pos = %f, %f   zoom = %f\n", mx,my,zoom);
 }

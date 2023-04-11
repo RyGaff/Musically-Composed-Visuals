@@ -4,11 +4,11 @@ TARGET= main-ser main-par
 
 all: $(TARGET)
 
-main-ser: main.cpp
-	$(CC) $(CFLAGS) -Wno-unknown-pragmas -o main-ser main.cpp
+main-ser: fft.cpp
+	$(CC) $(CFLAGS) -Wno-unknown-pragmas -o fft-ser fft.cpp
 	
-main-par: main.cpp
-	$(CC) $(CFLAGS) -fopenmp -o main-par main.cpp
+main-par: fft.cpp
+	$(CC) $(CFLAGS) -fopenmp -o fft-par fft.cpp
 
 clean:
 	rm -f $(TARGET)

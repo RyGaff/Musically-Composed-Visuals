@@ -26,7 +26,7 @@ def magPlot(dataF):
     plt.grid()
     plt.xlabel("Freq")
     plt.ylabel("Magnitude")
-    plt.savefig("plotComplex.png")
+    plt.savefig("magPlot.png")
     plt.show()
 
 
