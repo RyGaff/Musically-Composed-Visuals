@@ -11,11 +11,13 @@ GPUAnimBitmap *bitmap_Ptr;
 // Just our default starting values
 float const REAL = -0.7;
 float const IMAGINARY = 0.27015;
+// float const REAL = -0.773760;
+// float const IMAGINARY = 0.112774;
 
 // Variables that modify the function/user controls
 float cRe = REAL;
 float cIm = IMAGINARY;
-int max_iterations = 150;
+int max_iterations = 250;
 double zoom = 1;
 double mx = 0;
 double my = 0;
@@ -24,8 +26,9 @@ int animation = 0;
 // Global helper variables
 int Step_To_Seek = 0;
 unsigned int frames = 0;
-double t = 0.0;
 char read_from_file[] = "normalized_normTest.csv";
+double t = 0.0;
+
 
 void key_listener(unsigned char key, int x, int y);
 void arrow_listener(int key, int x, int y);
@@ -43,32 +46,33 @@ __global__ void julia(uchar4 *pixels, int max_iterations,
     int y = threadIdx.y + blockIdx.y * blockDim.y;
     int offset = x + y * blockDim.x * gridDim.x;
 
-    zx = 1.5 * (x - width / 2) / (0.5 * zoom * width) - mX;
+    zx = 1.5 * (x - width / 2) / (0.5 * zoom * width) + mX;
     zy = (y - height / 2) / (0.5 * zoom * height) + mY;
 
     int iteration = 0;
+    float magnitude = 0.0;
     while (iteration < max_iterations)
     {
         ox = zx;
         oy = zy;
         zx = (ox * ox - oy * oy) + cRe;
         zy = (ox * oy + ox * oy) + cIm;
-        if ((zx * zx + zy * zy) > 4)
-        {
-            pixels[offset].x = 0.0;
-            pixels[offset].y = 0.0;
-            pixels[offset].z = 0.0;
-            pixels[offset].w = 255;
-            return;
-        }
+        magnitude = zx * zx + zy * zy;
+        if ((magnitude) > 4) break;   
         iteration++;
     }
 
     if (iteration == max_iterations)
-    {
-        pixels[offset].x = (unsigned char)255 * 0;
-        pixels[offset].y = (unsigned char)255 * (ox * ox);
-        pixels[offset].z = (unsigned char)255 * oy;
+    { 
+        pixels[offset].x = 255 * magnitude/2;
+        pixels[offset].y = 255 * magnitude/4;
+        pixels[offset].z = 255;
+        pixels[offset].w = 255;
+
+    } else {
+        pixels[offset].x = 0;
+        pixels[offset].y = (255 * iteration/max_iterations)/magnitude;
+        pixels[offset].z = 255 * iteration/max_iterations;
         pixels[offset].w = 255;
     }
 }
@@ -79,20 +83,16 @@ void generateFrame(uchar4 *ptr)
     dim3 threads(16, 16);
     if (animation == 1)
     {
-
+        double old_time = t;
+        t = clock();
+        double delta_time = (t - old_time)/CLOCKS_PER_SEC;
         double *buf;
         buf = csv_to_array(read_from_file);
+    
+        cRe =  (cRe + (.001 * atan(buf[1]))) + 0.001 *  tan(delta_time);
+        cIm =  (cIm + (.01  * atan(buf[0]))) + 0.0001 * tan(delta_time); 
 
-        double old_time = t;
-        // t = gettimeofday(&tv, NULL);
-        t = clock();
-        double delta_time = (t - old_time);
-
-        // cRe = (cRe + buf[0]) +  0.000001 * sin(delta_time/zoom);
-        cRe = (cRe) +  0.01 * (buf[0] * sin(delta_time));
-        // cIm = (cIm + buf[1]) +  0.000001 * cos(delta_time/zoom); 
-        cIm = (cIm) +  0.01 * (buf[1] * cos(delta_time));
-    }
+    } 
 
     START_TIMER(julia);
     julia<<<grids, threads>>>(ptr, max_iterations, cRe, cIm, mx, my, zoom);
@@ -108,6 +108,7 @@ int main(void)
     GPUAnimBitmap bitmap(block, block, NULL);
     bitmap_Ptr = &bitmap;
 
+    t = time(0);
     bitmap.anim_and_exit((void (*)(uchar4 *, void *))generateFrame, NULL);
     glutKeyboardFunc(key_listener);
     glutSpecialFunc(arrow_listener);

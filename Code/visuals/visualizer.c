@@ -19,7 +19,7 @@ int const width = block;
 // Variables that modify the function/user controls
 float cRe = REAL;
 float cIm = IMAGINARY;
-int max_iterations = 150;
+int max_iterations = 250;
 double zoom = 1;
 double mx = 0;
 double my = 0;
@@ -28,6 +28,7 @@ int animation = 0;
 // Global helper variables
 int Step_To_Seek = 0;
 unsigned int frames = 0;
+char read_from_file[] = "normalized_normTest.csv";
 double t = 0.0;
 
 void display();
@@ -58,13 +59,7 @@ int main( int argc, char** argv )
 
 void julia(double zoom, double mX, double mY)
 {
-    
 	double zx, zy, ox, oy;
-
-    // glBegin( GL_POINTS ); // start drawing in single pixel mode, 
-    // KILLS performance but should be easily parallizable with cuda I hope
-    // If failure to parallelize with cuda with draw with triangles and textures instead
-
     // algorithm to draw the julia set. 
     // basic pseduo code can be found at https://en.wikipedia.org/wiki/Julia_set
     // Note this algorithm is modified
@@ -74,29 +69,29 @@ void julia(double zoom, double mX, double mY)
 			zy = (y - height / 2) / (0.5 * zoom * height) + mY;
             int offset = (y * width) + x;
 			int iteration = 0;
+            float magnitude = 0.0;
             while (iteration < max_iterations){
 				ox = zx;
 				oy = zy;
 				zx = (ox * ox - oy * oy) + cRe;
                 zy = (ox * oy + ox * oy) + cIm;
-				if((zx * zx + zy * zy) > 4){
-                    pixels[y * width * 4 + x * 4 + 0] = 0.0;
-                    pixels[y * width * 4 + x * 4 + 1] = 0.0;
-                    pixels[y * width * 4 + x * 4 + 2] = 0.0;
-                    pixels[y * width * 4 + x * 4 + 3] = 1.0;
-                    break;
-                }
-
+                magnitude = zx * zx + zy * zy;
+				if((magnitude) > 4) break;
                 iteration++;
 			}	
 
 			if(iteration == max_iterations ){// Set color to draw julia
-                pixels[y * width * 4 + x * 4 + 0] = 0;
-                pixels[y * width * 4 + x * 4 + 1] = ox*ox;
-                pixels[y * width * 4 + x * 4 + 2] = oy;
-                pixels[y * width * 4 + x * 4 + 3] = 1.0;
+                pixels[y * width * 4 + x * 4 + 0] = (magnitude/2);
+                pixels[y * width * 4 + x * 4 + 1] = (magnitude/4);
+                pixels[y * width * 4 + x * 4 + 2] = 1.0;
+                pixels[y * width * 4 + x * 4 + 3] = 1.0; 
             
-			}
+			} else {
+                pixels[y * width * 4 + x * 4 + 0] = 0;
+                pixels[y * width * 4 + x * 4 + 1] = ((iteration/max_iterations)/magnitude);
+                pixels[y * width * 4 + x * 4 + 2] = (iteration/max_iterations);
+                pixels[y * width * 4 + x * 4 + 3] = 1.0;
+            }
 		}
 	}
 }
@@ -104,17 +99,14 @@ void julia(double zoom, double mX, double mY)
 void animate(){
   
     if (animation == 1){ 
-        // Read from csv
-        double *buf;
-        buf = csv_to_array("cat.csv");
-
         double old_time = t;
         t = clock();
-        double delta_time = (t - old_time);
+        double delta_time = (t - old_time)/CLOCKS_PER_SEC;
+        double *buf;
+        buf = csv_to_array(read_from_file);
 
-        cRe = (cRe + buf[0]/10000000)  + 0.005 * sin(delta_time/zoom);
-        cIm = (cIm + buf[1]/100000000) + 0.005 * cos(delta_time/zoom); 
-
+        cRe =  (cRe + (.001 * atan(buf[1]))) + 0.001 *  tan(delta_time);
+        cIm =  (cIm + (.01  * atan(buf[0]))) + 0.0001 * tan(delta_time);
     }
     display();
 }
