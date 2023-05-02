@@ -26,7 +26,7 @@ int animation = 0;
 // Global helper variables
 int Step_To_Seek = 0;
 unsigned int frames = 0;
-char read_from_file[] = "normalized_normTest.csv";
+char *read_from_file;
 double t = 0.0;
 
 
@@ -103,8 +103,15 @@ void generateFrame(uchar4 *ptr)
     frames++;
 }
 
-int main(void)
+int main(int argc, char* argv[])
 {
+    if (argc != 2){
+        printf("Usage: ./par_vis <csv file>");   
+        exit(1);
+    }
+
+    read_from_file = argv[1];
+
     GPUAnimBitmap bitmap(block, block, NULL);
     bitmap_Ptr = &bitmap;
 
