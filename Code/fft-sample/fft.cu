@@ -321,11 +321,15 @@ int fft_cuda(const cuFloatComplex* a, cuFloatComplex* A, int log2n, int N){
     int size = N >> 1;
     int block_size = min(size, properties.maxThreadsPerBlock);
     dim3 block(block_size, 1);
-    dim3 grid(16,1);
+    dim3 grid(block_size/ 16,1);
+    cudaDeviceSynchronize();
 
+    START_TIMER(fft)
     iterative_fft_kernel<<<grid, block>>>(a0, A0, log2n);
+    STOP_TIMER(fft)
     cudaMemcpy(A, A0, sizeof(cuFloatComplex)* N, cudaMemcpyDeviceToHost);
     
+    printf("Thread Count: %d - FFT Type: Misc for now - FFT Time: %lfs\n", thread_count, GET_TIMER(fft));
     cudaFree(a0);
     cudaFree(A0);
 
@@ -445,18 +449,18 @@ int main(int argc,const char** argv){
     
     int log2n = log2(output.size());
     // Init Cuda stuff
-    START_TIMER(fft);
+    // START_TIMER(fft);
     // fft(output);
     // for (unsigned int i = 0; i < output.size(); ++i) {
     //         out[i] = in[bit_reversal(i, log2n)];
     //     }
     fft_cuda(in, out, log2n, output.size());
-    STOP_TIMER(fft);
+    // STOP_TIMER(fft);
     
     // Serial for now - TODO: Add OMP def
-    printf("Thread Count: %d - FFT Type: Misc for now - FFT Time: %lfs\n", thread_count, GET_TIMER(fft));
     writeDataToCSVFile(out, output.size(), csv_name);
     // writeDataToCSVFile(output, "recursive_" + csv_name);
+    free(out);
 
     return EXIT_SUCCESS;
 }
