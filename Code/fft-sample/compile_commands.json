@@ -1,0 +1,14 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/nvcc",
+      "-c",
+      "-o",
+      "fft-par",
+      "fft.cu"
+    ],
+    "directory": "/home/ryan/School/Musically-Composed-Visuals/Code/fft-sample",
+    "file": "/home/ryan/School/Musically-Composed-Visuals/Code/fft-sample/fft.cu",
+    "output": "/home/ryan/School/Musically-Composed-Visuals/Code/fft-sample/fft-par"
+  }
+]

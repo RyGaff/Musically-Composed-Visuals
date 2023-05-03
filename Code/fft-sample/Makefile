@@ -1,14 +1,14 @@
 CFLAGS= -g -Wall
 CC    = g++
-TARGET= main-ser main-par
+TARGET= clean fft-ser fft-par 
 
 all: $(TARGET)
 
-main-ser: fft.cpp
+fft-ser: fft.cpp
 	$(CC) $(CFLAGS) -Wno-unknown-pragmas -o fft-ser fft.cpp
 	
-main-par: fft.cpp
-	$(CC) $(CFLAGS) -fopenmp -o fft-par fft.cpp
+fft-par: fft.cpp
+	nvcc -o fft-par fft.cu
 
 clean:
 	rm -f $(TARGET)
