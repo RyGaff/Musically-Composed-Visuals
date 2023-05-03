@@ -251,13 +251,13 @@ __global__ void iterative_fft_kernel(const cuDoubleComplex* a, cuDoubleComplex* 
         float tempr;
         float tempi;
 
-        sincosf(-3.1415926536 * j/m2, &tempi, &tempr);
+        sincosf(3.1415926536 * j/m2, &tempi, &tempr);
         cuDoubleComplex w = make_cuDoubleComplex(tempr, tempi);
         cuDoubleComplex t = cuCmul(w, A[k+j + m2]);
         A[k+j] = cuCadd(u,t);
         A[k+j + m2] = cuCsub(u,t);
+        __syncthreads();
     }
-    //__syncthreads();
 }
 /*
  * Handles the cuda operations and calls iterative_fft_kernel
@@ -280,10 +280,11 @@ int fft_cuda(const cuDoubleComplex* a, cuDoubleComplex* A, int log2n, unsigned i
     int min_block_size;
     cudaOccupancyMaxPotentialBlockSize(&min_block_size, &block_size, iterative_fft_kernel, 0, N);
     int block_count = (N + block_size -1)/block_size;
-    cudaDeviceSynchronize();
+
     START_TIMER(fft)
     iterative_fft_kernel<<<block_count, block_size>>>(a0, A0, log2n);
     STOP_TIMER(fft)
+
     cudaDeviceSynchronize();
     cudaMemcpy(A, A0, sizeof(cuDoubleComplex)* N, cudaMemcpyDeviceToHost);
     
