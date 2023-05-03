@@ -236,7 +236,7 @@ __device__ unsigned int bit_reversal(unsigned int i, int log2n){
  */
 __global__ void iterative_fft_kernel(const cuDoubleComplex* a, cuDoubleComplex* A, int log2n){
     
-    uint32_t i = threadIdx.x + blockIdx.x * blockDim.x;
+    unsigned int i = threadIdx.x + blockIdx.x * blockDim.x;
     A[i] = a[bit_reversal(i, log2n)];
 
     __syncthreads();
@@ -251,17 +251,18 @@ __global__ void iterative_fft_kernel(const cuDoubleComplex* a, cuDoubleComplex* 
         float tempr;
         float tempi;
 
-        sincosf(-3.1415926536 * j, &tempi, &tempr);
+        sincosf(-3.1415926536 * j/m2, &tempi, &tempr);
         cuDoubleComplex w = make_cuDoubleComplex(tempr, tempi);
         cuDoubleComplex t = cuCmul(w, A[k+j + m2]);
         A[k+j] = cuCadd(u,t);
         A[k+j + m2] = cuCsub(u,t);
     }
+    //__syncthreads();
 }
 /*
  * Handles the cuda operations and calls iterative_fft_kernel
  */
-int fft_cuda(const cuDoubleComplex* a, cuDoubleComplex* A, int log2n, int N){    
+int fft_cuda(const cuDoubleComplex* a, cuDoubleComplex* A, int log2n, unsigned int N){    
     // Allocate memory on the cuda device
     cuDoubleComplex* a0;
     cuDoubleComplex* A0;
@@ -279,7 +280,7 @@ int fft_cuda(const cuDoubleComplex* a, cuDoubleComplex* A, int log2n, int N){
     int min_block_size;
     cudaOccupancyMaxPotentialBlockSize(&min_block_size, &block_size, iterative_fft_kernel, 0, N);
     int block_count = (N + block_size -1)/block_size;
-
+    cudaDeviceSynchronize();
     START_TIMER(fft)
     iterative_fft_kernel<<<block_count, block_size>>>(a0, A0, log2n);
     STOP_TIMER(fft)
