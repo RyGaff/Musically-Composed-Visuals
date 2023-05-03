@@ -242,18 +242,27 @@ __global__ void iterative_fft_kernel(const cuDoubleComplex* a, cuDoubleComplex* 
     __syncthreads();
 
     for (int s = 1; s <= log2n; ++s) {
-        int m2 = 1 << (s - 1); // m2 = m/2 -1#    
+        int m = 1 << s;
+        int m2 = m >> 1;
 
+        //Indexing for the two inner loops from the original function
         int j = threadIdx.x % m2;
-        int k = threadIdx.x / m2 * (1 << s);
+        int k = threadIdx.x / m2 * m;
 
-        cuDoubleComplex u = A[k+j];
         float tempr;
         float tempi;
 
-        sincosf(3.1415926536 * j/m2, &tempi, &tempr);
+        //Puts the sin into tempi and cos into tempr
+        //Idea came from the relationship between sin and cos and exp functions
+        //I modifed the initial algorithm with Eulers
+        //https://en.wikipedia.org/wiki/Euler%27s_formula
+        sincos(j * (3.1415926536/m2), &tempi, &tempr);
+        
+        //I then put make w a complex double to match the original algorithm 
         cuDoubleComplex w = make_cuDoubleComplex(tempr, tempi);
+
         cuDoubleComplex t = cuCmul(w, A[k+j + m2]);
+        cuDoubleComplex u = A[k+j];
         A[k+j] = cuCadd(u,t);
         A[k+j + m2] = cuCsub(u,t);
         __syncthreads();
