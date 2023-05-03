@@ -104,15 +104,15 @@ vector<complex<double>> getDataFromWav(const std::string &file_path){
     return convertWavDataToComplexVector(data);
 }
 
-vector<cuFloatComplex> convertWavDataToComplexVector2(vector<int16_t> d){
-    vector<cuFloatComplex> output;
+vector<cuDoubleComplex> convertWavDataToComplexVector2(vector<int16_t> d){
+    vector<cuDoubleComplex> output;
     for(int16_t i : d){
-        output.push_back(make_cuFloatComplex(i,0));
+        output.push_back(make_cuDoubleComplex(i,0));
     }
     return output;
 }
 
-vector<cuFloatComplex> getDataFromWav2(const std::string &file_path){
+vector<cuDoubleComplex> getDataFromWav2(const std::string &file_path){
     ifstream wav(file_path);
     struct WAV_HEADER whr;
 
@@ -201,61 +201,18 @@ void transformSignal(vector<complex<double>>& signal){
 /*
  * Ensure that signal length is a power of two
  */
-void transformSignal(vector<cuFloatComplex>& signal){
+void transformSignal(vector<cuDoubleComplex>& signal){
     int diff = isPowerOfTwo(signal.size()) ? 0 : findNextPowerOfTwo(signal.size()) - signal.size();
     if(diff == 0) {
         return;
     }else{
         for(int i = 0; i < diff; i++){
-            signal.push_back(make_cuFloatComplex(0,0));	
+            signal.push_back(make_cuDoubleComplex(0,0));	
         }
     }
 }
 
 
-/*
- * Perform a Fast Fourier Transform (FFT) on audio data.
- *
- * Output will be a vector.
- */
-void fft(vector<complex<double>>& signal){
-// #  pragma omp parallel default(none) shared(signal)
-    {
-   
-        // Thread count
-#       ifdef _OPENMP
-        thread_count = omp_get_thread_num();
-        printf("Thread Count Set At: %d", thread_count);
-#       else
-        thread_count = 1;
-#       endif
-
-        transformSignal(signal);
-        int N = signal.size();
-
-        if(N == 1) return; // Base case
-
-        vector<complex<double>> even(N/2), odd(N/2); 
-// #       pragma omp for
-        for(int i = 0; 2 * i < N; i++){
-            even[i] = signal[2*i];
-            odd[i] = signal[2*i+1];
-        }
-
-        fft(even);
-        fft(odd);
-
-        double angle = 2 * M_PI / N;
-        complex<double> w_n(cos(angle),sin(angle));
-        complex<double> w(1);
-//#       pragma omp for shared(even, odd) reduction(*:w)
-        for(int i = 0; 2 * i < N; i++){
-             signal[i] = even[i] + w * odd[i];
-             signal[i + N/2] = even[i] - w * odd[i];
-             w *= w_n;
-        } 
-    }
-}
 
 // https://en.wikipedia.org/wiki/Cooley%E2%80%93Tukey_FFT_algorithm
 // cd is a complex double
@@ -277,7 +234,7 @@ __device__ unsigned int bit_reversal(unsigned int i, int log2n){
 /*
  * My brain hurts
  */
-__global__ void iterative_fft_kernel(const cuFloatComplex* a, cuFloatComplex* A, int log2n){
+__global__ void iterative_fft_kernel(const cuDoubleComplex* a, cuDoubleComplex* A, int log2n){
     
     uint32_t i = threadIdx.x + blockIdx.x * blockDim.x;
     A[i] = a[bit_reversal(i, log2n)];
@@ -290,44 +247,44 @@ __global__ void iterative_fft_kernel(const cuFloatComplex* a, cuFloatComplex* A,
         int j = threadIdx.x % m2;
         int k = threadIdx.x / m2 * (1 << s);
 
-        cuFloatComplex u = A[k+j];
+        cuDoubleComplex u = A[k+j];
         float tempr;
         float tempi;
 
         sincosf(-3.1415926536 * j, &tempi, &tempr);
-        cuFloatComplex w = make_cuFloatComplex(tempr, tempi);
-        cuFloatComplex t = cuCmulf(w, A[k+j + m2]);
-        A[k+j] = cuCaddf(u,t);
-        A[k+j + m2] = cuCsubf(u,t);
-        __syncthreads();
+        cuDoubleComplex w = make_cuDoubleComplex(tempr, tempi);
+        cuDoubleComplex t = cuCmul(w, A[k+j + m2]);
+        A[k+j] = cuCadd(u,t);
+        A[k+j + m2] = cuCsub(u,t);
     }
 }
 /*
  * Handles the cuda operations and calls iterative_fft_kernel
  */
-int fft_cuda(const cuFloatComplex* a, cuFloatComplex* A, int log2n, int N){    
+int fft_cuda(const cuDoubleComplex* a, cuDoubleComplex* A, int log2n, int N){    
     // Allocate memory on the cuda device
-    cuFloatComplex* a0;
-    cuFloatComplex* A0;
-    cudaMalloc((void **)&a0, sizeof(cuFloatComplex) * N);
-    cudaMalloc((void **)&A0, sizeof(cuFloatComplex) * N);
+    cuDoubleComplex* a0;
+    cuDoubleComplex* A0;
+    cudaMalloc((void **)&a0, sizeof(cuDoubleComplex) * N);
+    cudaMalloc((void **)&A0, sizeof(cuDoubleComplex) * N);
     
-    cudaMemcpy(a0, a, sizeof(cuFloatComplex) * N, cudaMemcpyHostToDevice);
+    cudaMemcpy(a0, a, sizeof(cuDoubleComplex) * N, cudaMemcpyHostToDevice);
 
     //Just putting this here for now dont feel like making testsing stuff atm
     //Just gets the max amount of threads possible given the cuda device
     cudaDeviceProp properties;
     cudaGetDeviceProperties(&properties, 0);
-    int size = N >> 1;
-    int block_size = min(size, properties.maxThreadsPerBlock);
-    dim3 block(block_size, 1);
-    dim3 grid(block_size/ 16,1);
-    cudaDeviceSynchronize();
+    // int block_size = min(size, properties.maxThreadsPerBlock);
+    int block_size;
+    int min_block_size;
+    cudaOccupancyMaxPotentialBlockSize(&min_block_size, &block_size, iterative_fft_kernel, 0, N);
+    int block_count = (N + block_size -1)/block_size;
 
     START_TIMER(fft)
-    iterative_fft_kernel<<<grid, block>>>(a0, A0, log2n);
+    iterative_fft_kernel<<<block_count, block_size>>>(a0, A0, log2n);
     STOP_TIMER(fft)
-    cudaMemcpy(A, A0, sizeof(cuFloatComplex)* N, cudaMemcpyDeviceToHost);
+    cudaDeviceSynchronize();
+    cudaMemcpy(A, A0, sizeof(cuDoubleComplex)* N, cudaMemcpyDeviceToHost);
     
     printf("Thread Count: %d - FFT Type: Misc for now - FFT Time: %lfs\n", thread_count, GET_TIMER(fft));
     cudaFree(a0);
@@ -391,7 +348,7 @@ int writeDataToCSVFile(const vector<complex<double>>& out, const string fileName
  * 
  * Return: The number of complex numbers ie number of lines, will make wrapping with the visalizer easier
  */
-int writeDataToCSVFile(cuFloatComplex* out, int outsize,const string fileName = "coords.csv"){
+int writeDataToCSVFile(cuDoubleComplex* out, int outsize,const string fileName = "coords.csv"){
 
     ofstream outFile(fileName);
     outFile << "x,y" << "\n";
@@ -434,18 +391,18 @@ int main(int argc,const char** argv){
     std::string csv_name  = argv[2];
 
    // vector<complex<double>> output = getDataFromWav(file_name);    
-    vector<cuFloatComplex> output = getDataFromWav2(file_name);    
+    vector<cuDoubleComplex> output = getDataFromWav2(file_name);    
     transformSignal(output); // Ensure that output size is a power of 2
 
     // Convert the vector to array, yes I know not optimal
-    cuFloatComplex in[output.size()];
+    cuDoubleComplex in[output.size()];
     copy(output.begin(),output.end(), in);
 
     // Add a timer to test for parallelism
     // Add a barrier if needed
     // vector<complex<double>> iterative_out(output.size());
-    cuFloatComplex* out;
-    out = (cuFloatComplex*)calloc(output.size(),sizeof(cuFloatComplex));
+    cuDoubleComplex* out;
+    out = (cuDoubleComplex*)calloc(output.size(),sizeof(cuDoubleComplex));
     
     int log2n = log2(output.size());
     // Init Cuda stuff
