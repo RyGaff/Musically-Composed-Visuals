@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #get the input wav file
-inputwav=$1
+inputwav=${1:?input name of wav file that is in /fft-sample/audio-files/ WITHOUT the .wav extension}
 
 cd fft-sample/
 make

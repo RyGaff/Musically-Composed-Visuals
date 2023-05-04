@@ -151,6 +151,7 @@ void key_listener(unsigned char key, int x, int y)
     case 'q':
         // Free our buffers and cuda mem
         bitmap_Ptr->free_resources();
+        printf("Remaining frames to generate %d\t\tmintime = %lf\n", 50 - frames++, mintime);
         exit(0);
         break;
     case 'w':
