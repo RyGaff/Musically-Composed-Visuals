@@ -1,9 +1,10 @@
 #!/bin/bash
 
 #get the input wav file
-inputwav=$1
+inputwav=${1:?input name of wav file that is in /fft-sample/audio-files/ WITHOUT the .wav extension}
 
-echo $inputwav
+echo running $inputwav
+echo
 #Run the ffts
 echo Running fft/dft:
 echo SERIAL:
