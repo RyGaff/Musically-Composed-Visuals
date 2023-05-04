@@ -17,7 +17,7 @@ int max_iterations = 250;
 double zoom = 1;
 double mx = 0;
 double my = 0;
-int animation = 0;
+int animation = 1;
 
 // Global helper variables
 int Step_To_Seek = 0;
@@ -82,10 +82,10 @@ void generateFrame(uchar4 *ptr)
         double delta_time = (t - old_time)/CLOCKS_PER_SEC;
         double *buf;
         buf = csv_to_array(fp);
-    
-        cRe =  (cRe + (.001 * atan(buf[1]))) + 0.001 *  tan(delta_time);
-        cIm =  (cIm + (.01  * atan(buf[0]))) + 0.0001 * tan(delta_time); 
 
+        cRe =  (cRe + (.001 * buf[1])) + 0.001 *  tan(delta_time);
+        cIm =  (cIm + (.01  * buf[0])) + 0.0001 * tan(delta_time); 
+        
     } 
 
     START_TIMER(julia);
@@ -103,7 +103,7 @@ void generateFrame(uchar4 *ptr)
             bitmap_Ptr->free_resources();
             exit(0);
         } else {
-            printf("Remaining frames to generate %d\t\tmintime = %lf\n", 50 - frames++, mintime);
+            printf("\nRemaining frames to generate %d\t\tmintime = %lf\n", 50 - frames++, mintime);
         }
     } 
 //    print_stats(GET_TIMER(julia));
@@ -151,7 +151,7 @@ void key_listener(unsigned char key, int x, int y)
     case 'q':
         // Free our buffers and cuda mem
         bitmap_Ptr->free_resources();
-        printf("Remaining frames to generate %d\t\tmintime = %lf\n", 50 - frames++, mintime);
+        printf("\nMin Frame time for parallel version %lf\n", mintime);
         exit(0);
         break;
     case 'w':
@@ -204,7 +204,8 @@ void key_listener(unsigned char key, int x, int y)
             i = increment imaginary by .01\n\
             k = decrement imaginary by .01\n\
             space = enable/disable animation\n\
-            = = zoom in\n - = zoom out\n\
+            = = zoom in\n\
+            - = zoom out\n\
             ArrowKeys to pan camera in a direction\n\
             ");
         return;

@@ -60,7 +60,7 @@ int main( int argc, char** argv )
     glutInit( &argc, argv );
     glutInitDisplayMode( GLUT_DOUBLE | GLUT_RGBA);
     glutInitWindowSize( width, height);
-    glutInitWindowPosition(950,0);
+    glutInitWindowPosition(width/2,height/2);
     glutCreateWindow( "Julia" );
 
     glutDisplayFunc(animate);
@@ -120,8 +120,9 @@ void animate(){
         double *buf;
         buf = csv_to_array();
 
-        cRe =  (cRe + (.001 * atan(buf[1]))) + 0.001 *  tan(delta_time);
-        cIm =  (cIm + (.01  * atan(buf[0]))) + 0.0001 * tan(delta_time);
+        cRe =  (cRe + (.001 * buf[1])) + 0.001 *  tan(delta_time);
+        cIm =  (cIm + (.01  * buf[0])) + 0.0001 * tan(delta_time);
+
     }
     display();
 }
@@ -143,11 +144,11 @@ void display()
     
     if(strcmp(stop, "1") != 0){
         if (frames == 50){
-            printf("Min Frame time for serial version %lf\n", mintime);
+            printf("Min Frame time for parllel version %lf\n", mintime);
             free(pixels);
             exit(0);
         } else {
-            printf("Remaining frames to generate %d\t\tmintime = %lf\n", 50 - frames++, mintime);
+            printf("\nRemaining frames to generate %d\t\tmintime = %lf\n", 50 - frames++, mintime);
         }
     } 
 
@@ -157,7 +158,7 @@ void display()
 void key_listener(unsigned char key, int x, int y){
     switch(key){
         case 'q':
-            printf("Min Frame time for serial version %lf\n", mintime);
+            printf("\nMin Frame time for serial version %lf\n", mintime);
             free(pixels);
             exit(0);
             break;
@@ -206,7 +207,8 @@ void key_listener(unsigned char key, int x, int y){
             i = increment imaginary by .01\n\
             k = decrement imaginary by .01\n\
             space = enable/disable animation\n\
-            = = zoom in\n - = zoom out\n\
+            = = zoom in\n\
+            - = zoom out\n\
             ArrowKeys to pan camera in a direction\n\
             ");
             return;

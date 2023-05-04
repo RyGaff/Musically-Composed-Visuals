@@ -41,7 +41,7 @@ struct GPUAnimBitmap {
         glutInit( &c, &dummy );
         glutInitDisplayMode( GLUT_DOUBLE | GLUT_RGBA );
         glutInitWindowSize( width, height );
-        glutInitWindowPosition(950,0);
+        glutInitWindowPosition(width/2,height/2);
         glutCreateWindow( "Julia" );
 
         glBindBuffer    = (PFNGLBINDBUFFERARBPROC)GET_PROC_ADDRESS("glBindBuffer");
