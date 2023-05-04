@@ -220,27 +220,34 @@ __device__ unsigned int bit_reversal(unsigned int i, int log2n){
     return rev;
 }
 
+/**
+ * Discrete Fourier Transform
+ *
+ * CUDA version of dft.
+ *
+ * - Requires less overhead, but is slower than fft
+ */
 __global__ void dft_kernal(const cuDoubleComplex* a, cuDoubleComplex* A, unsigned int N) {
-    int output_index = 0;
-    int index = blockIdx.x * blockDim.x + threadIdx.x;
-    int stride = blockDim.x * gridDim.x;
-    __syncthreads();
-    for(uint64_t k = index; k < N; k += stride) {
-        cuDoubleComplex ans = make_cuDoubleComplex(0, 0);
-        for(uint64_t t = 0; t < N; t++){
-            double angle = (-2 * M_PI * t * k) / N;
-            double e_angle = exp(angle);
-            ans = cuCadd(ans, cuCmul(a[t], make_cuDoubleComplex(1,e_angle)));
-            __syncthreads();
+    int k = blockIdx.x * blockDim.x + threadIdx.x;
+    if (k < N) {
+        A[k] = make_cuDoubleComplex(0.0, 0.0);
+        for (int t = 0; t < N; t++) {
+            double angle = 2 * M_PI * t * k / N;
+            // Perform a Euler conversion to do cuda operations
+            cuDoubleComplex c = make_cuDoubleComplex(cos(angle), sin(angle));
+            A[k] = cuCadd(A[k], cuCmul(a[t], c));
         }
-        A[k] = ans;
-        output_index++;
-        __syncthreads();
     }
 }
 
 /*
- * My brain hurts
+ * Perform a Fast Fourier Transform (FFT) on audio data.
+ * 
+ * 2-radix fft transform
+ *
+ * My brain hurt.
+ *
+ * Output will be a vector.
  */
 __global__ void iterative_fft_kernel(const cuDoubleComplex* a, cuDoubleComplex* A, int log2n){
     
@@ -262,11 +269,11 @@ __global__ void iterative_fft_kernel(const cuDoubleComplex* a, cuDoubleComplex* 
 
         //Puts the sin into tempi and cos into tempr
         //Idea came from the relationship between sin and cos and exp functions
-        //I modifed the initial algorithm with Eulers
+        //We modifed the initial algorithm with Eulers
         //https://en.wikipedia.org/wiki/Euler%27s_formula
         sincos(j * (3.1415926536/m2), &tempi, &tempr);
         
-        //I then put make w a complex double to match the original algorithm 
+        //We then put make w a complex double to match the original algorithm 
         cuDoubleComplex w = make_cuDoubleComplex(tempr, tempi);
 
         cuDoubleComplex t = cuCmul(w, A[k+j + m2]);

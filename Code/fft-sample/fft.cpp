@@ -91,20 +91,24 @@ vector<complex<double>> getDataFromWav(const std::string &file_path){
     return convertWavDataToComplexVector(data);
 }
 
+/**
+ * Discrete Fourier Transform
+ *
+ * Serial version of dft.
+ *
+ * - Requires less overhead, but is slower than fft
+ */
 void dft(vector<complex<double>> signal,vector<complex<double>>& output){
     for(uint64_t k = 0; k < signal.size(); k++){
         complex<double> ans(0,0);
         for(uint64_t t = 0; t < signal.size(); t++){
-            double angle = (-2 * M_PI * t * k) / signal.size(); 	
+            double angle = (2 * M_PI * t * k) / signal.size(); 	
             complex<double> output = exp(complex<double>(0,angle));
             ans += signal[t] * output;
-            printf("EXPONENT OUTPUT!!!! ANGLE: %f --- OUTPUT: %f\n", angle, output);
         }
-        // output.push_back(ans);
         output[k] = ans;
     }
 }
-
 
 /*
  * Power of 2 helper function.
@@ -147,7 +151,7 @@ void transformSignal(vector<complex<double>>& signal){
  * 
  * 2-radix fft transform
  *
- * Output will be a vector.
+ * Output will be a vector for processing.
  */
 void fft_recursive(vector<complex<double>>& signal){
         transformSignal(signal);
