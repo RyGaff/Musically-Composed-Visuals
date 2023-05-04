@@ -1,9 +1,6 @@
-#include "dependencies.h"
-#include "gl_helper.h"
-#include "cuda_gl_interop.h"
-
-#define block 1024
-
+#include "visualizer.h"
+//#include <cstring>
+#include <stdio.h>
 // Array to hold our pixels. To be used with glDrawPixels
 float *pixels;
 
@@ -23,24 +20,42 @@ int max_iterations = 250;
 double zoom = 1;
 double mx = 0;
 double my = 0;
-int animation = 0;
+int animation = 1;
 
 // Global helper variables
 int Step_To_Seek = 0;
-unsigned int frames = 0;
-char read_from_file[] = "normalized_normTest.csv";
+FILE *fp;
+int charcount = 0;
 double t = 0.0;
-
-void display();
-void animate();
-void julia(double zoom, double mX, double mY);
-void key_listener(unsigned char key, int x, int y);
-void arrow_listener(int key, int x, int y);
-void print_stats(float render_time);
-double* csv_to_array(char* file); 
+unsigned int frames = 0;
+double mintime = 999999.0;
+char *stop;
 
 int main( int argc, char** argv )
 {
+    if (argc != 3){
+        printf("Usage: ./vis <1 for continuous> <csv file>");   
+        printf("if the first argument is anything else the program stops after 50 frames are generated");
+        exit(1);
+    }
+
+    stop = argv[1];
+
+
+    if (!fp){
+        fp = fopen(argv[2], "r");
+        if (!fp)
+        {
+            puts("Failed to open file");
+            exit(EXIT_FAILURE);
+        }
+        for (char c = getc(fp); c != EOF; c = getc(fp)){
+            charcount++;        
+        }
+
+        fseek(fp, 0, SEEK_SET);
+    }
+
     pixels = calloc(width * height * 4, sizeof(pixels));
     glutInit( &argc, argv );
     glutInitDisplayMode( GLUT_DOUBLE | GLUT_RGBA);
@@ -103,7 +118,7 @@ void animate(){
         t = clock();
         double delta_time = (t - old_time)/CLOCKS_PER_SEC;
         double *buf;
-        buf = csv_to_array(read_from_file);
+        buf = csv_to_array();
 
         cRe =  (cRe + (.001 * atan(buf[1]))) + 0.001 *  tan(delta_time);
         cIm =  (cIm + (.01  * atan(buf[0]))) + 0.0001 * tan(delta_time);
@@ -121,14 +136,28 @@ void display()
     START_TIMER(julia);
     julia(zoom, mx, my);
     STOP_TIMER(julia);
-    print_stats(GET_TIMER(julia));
+    //print_stats(GET_TIMER(julia));
+    if (GET_TIMER(julia) < mintime){
+        mintime = GET_TIMER(julia);
+    }
     
+    if(strcmp(stop, "1") != 0){
+        if (frames == 50){
+            printf("Min Frame time for serial version %lf\n", mintime);
+            free(pixels);
+            exit(0);
+        } else {
+            printf("Remaining frames to generate %d\t\tmintime = %lf\n", 50 - frames++, mintime);
+        }
+    } 
+
     glutSwapBuffers();
 }
 
 void key_listener(unsigned char key, int x, int y){
     switch(key){
         case 'q':
+            printf("Min Frame time for serial version %lf\n", mintime);
             free(pixels);
             exit(0);
             break;
@@ -212,14 +241,8 @@ void print_stats(float render_time){
     printf("    Camera: pos = %f, %f   zoom = %f\n", mx,my,zoom);
 }
 
-double* csv_to_array(char *file){
+double* csv_to_array(){
     static double ret[2];
-    FILE *fp;
-    fp = fopen(file, "r");
-    if (!fp){
-        puts("File Not Found");
-        exit(EXIT_FAILURE);
-    }
 
     fseek(fp, Step_To_Seek, SEEK_SET);
     char *token;
@@ -236,7 +259,7 @@ double* csv_to_array(char *file){
         i += 1;
     }
 
-    Step_To_Seek = (len + Step_To_Seek) % 4126;
+    Step_To_Seek = (len + Step_To_Seek) % charcount;
 
     return ret;
 }

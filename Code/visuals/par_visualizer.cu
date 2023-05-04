@@ -1,8 +1,4 @@
-#include "GPU_Animation_Bitmap.h"
-#include "dependencies.h"
-
-#define block 1024
-
+#include "par_visualizer.h"
 // Init our animation bitmap.
 // This is where most of the opengl and cuda interop stuff is.
 GPUAnimBitmap *bitmap_Ptr;
@@ -30,12 +26,8 @@ char *read_from_file;
 double t = 0.0;
 FILE *fp;
 int charcount = 0;
-
-
-void key_listener(unsigned char key, int x, int y);
-void arrow_listener(int key, int x, int y);
-void print_stats(float render_time);
-double *csv_to_array(FILE *fp);
+char *stop;
+double mintime = 99999;
 
 __global__ void julia(uchar4 *pixels, int max_iterations,
                       double cRe, double cIm, double mX, double mY, double zoom)
@@ -100,20 +92,35 @@ void generateFrame(uchar4 *ptr)
     julia<<<grids, threads>>>(ptr, max_iterations, cRe, cIm, mx, my, zoom);
     cudaDeviceSynchronize();
     STOP_TIMER(julia);
+    
+    if (GET_TIMER(julia) < mintime){
+        mintime = GET_TIMER(julia);
+    }
 
-    print_stats(GET_TIMER(julia));
-    frames++;
+    if(strcmp(stop, "1") != 0){
+        if (frames == 50){
+            printf("Min Frame time for parllel version %lf\n", mintime);
+            bitmap_Ptr->free_resources();
+            exit(0);
+        } else {
+            printf("Remaining frames to generate %d\t\tmintime = %lf\n", 50 - frames++, mintime);
+        }
+    } 
+//    print_stats(GET_TIMER(julia));
 }
 
 int main(int argc, char* argv[])
 {
-    if (argc != 2){
-        printf("Usage: ./par_vis <csv file>");   
+    if (argc != 3){
+        printf("Usage: ./par_vis <1 for continuous> <csv file>");   
+        printf("if the first argument is anything else the program stops after 50 frames are generated");
         exit(1);
     }
 
+    stop = argv[1];
+
     if (!fp){
-        fp = fopen(argv[1], "r");
+        fp = fopen(argv[2], "r");
         if (!fp)
         {
             puts("Failed to open file");
