@@ -203,38 +203,31 @@ unsigned int bit_reversal(unsigned int i, int log2n){
 void iterative_fft(vector<cd>& a, vector<cd>& A, int log2n){
     int n = a.size();
     unsigned un = a.size(); // Done to stop a warning about comparing unsigned an signed ints, shouldn't change functionality
-#   pragma omp parallel default(none) shared(n,un, a, A, thread_count, log2n)
-    {
-#       ifdef _OPENMP
-        thread_count = omp_get_num_threads();
-#       else
-        thread_count = 1;
-#       endif    
-#       pragma omp for nowait
-        for (unsigned int i = 0; i < un; ++i) {
-            A[i] = a[bit_reversal(i, log2n)];
-        }
 
-        const complex<double> J(0, 1);
-        for (int s = 1; s <= log2n; ++s) {
-            int m = 1 << s; // 2 power s
-            int m2 = m >> 1; // m2 = m/2 -1#    
-            cd w(1, 0);
-            cd wm = exp(J * (3.1415926536 / m2));
+    for (unsigned int i = 0; i < un; ++i) {
+        A[i] = a[bit_reversal(i, log2n)];
+    }
 
-            for (int j = 0; j < m2; ++j) {
-#           pragma omp for 
-                for (int k = j; k < n; k += m) {
-                    cd t = w * A[k + m2]; 
-                    cd u = A[k];
-                    A[k] = u + t;
-                    A[k + m2] = u - t;
-                    
-                }
-                w *= wm;
+    const complex<double> J(0, 1);
+    for (int s = 1; s <= log2n; ++s) {
+        int m = 1 << s; // 2 power s
+        int m2 = m >> 1; // m2 = m/2 -1#    
+        cd w(1, 0);
+        cd wm = exp(J * (3.1415926536 / m2));
+
+        for (int j = 0; j < m2; ++j) {
+
+            for (int k = j; k < n; k += m) {
+                cd t = w * A[k + m2]; 
+                cd u = A[k];
+                A[k] = u + t;
+                A[k + m2] = u - t;
+                
             }
+            w *= wm;
         }
     }
+    
 }
 
 /*
