@@ -91,17 +91,24 @@ vector<complex<double>> getDataFromWav(const std::string &file_path){
     return convertWavDataToComplexVector(data);
 }
 
+/**
+ * Discrete Fourier Transform
+ *
+ * Serial version of dft.
+ *
+ * - Requires less overhead, but is slower than fft
+ */
 void dft(vector<complex<double>> signal,vector<complex<double>>& output){
     for(uint64_t k = 0; k < signal.size(); k++){
         complex<double> ans(0,0);
         for(uint64_t t = 0; t < signal.size(); t++){
-            double angle = (-2 * M_PI * t * k) / signal.size(); 	
-            ans += signal[t] * exp(complex<double>(0,angle));
+            double angle = (2 * M_PI * t * k) / signal.size(); 	
+            complex<double> output = exp(complex<double>(0,angle));
+            ans += signal[t] * output;
         }
-        output.push_back(ans);
+        output[k] = ans;
     }
 }
-
 
 /*
  * Power of 2 helper function.
@@ -141,47 +148,33 @@ void transformSignal(vector<complex<double>>& signal){
 
 /*
  * Perform a Fast Fourier Transform (FFT) on audio data.
+ * 
+ * 2-radix fft transform
  *
- * Output will be a vector.
+ * Output will be a vector for processing.
  */
-void fft(vector<complex<double>>& signal){
-// #  pragma omp parallel default(none) shared(signal)
-    {
-   
-        // Thread count
-#       ifdef _OPENMP
-        thread_count = omp_get_thread_num();
-        printf("Thread Count Set At: %d", thread_count);
-#       else
-        thread_count = 1;
-#       endif
-
+void fft_recursive(vector<complex<double>>& signal){
         transformSignal(signal);
         int N = signal.size();
 
-        if(N == 1) return; // Base case
-
         vector<complex<double>> even(N/2), odd(N/2); 
-// #       pragma omp for
         for(int i = 0; 2 * i < N; i++){
             even[i] = signal[2*i];
             odd[i] = signal[2*i+1];
         }
 
-        fft(even);
-        fft(odd);
+        fft_recursive(even);
+        fft_recursive(odd);
 
         double angle = 2 * M_PI / N;
         complex<double> w_n(cos(angle),sin(angle));
         complex<double> w(1);
-//#       pragma omp for shared(even, odd) reduction(*:w)
         for(int i = 0; 2 * i < N; i++){
              signal[i] = even[i] + w * odd[i];
              signal[i + N/2] = even[i] - w * odd[i];
              w *= w_n;
         } 
     }
-}
 
 // https://en.wikipedia.org/wiki/Cooley%E2%80%93Tukey_FFT_algorithm
 // cd is a complex double
@@ -306,22 +299,41 @@ int main(int argc,const char** argv){
 
     std::string file_name = argv[1];
     std::string csv_name  = argv[2];
+    std::string dft_csv_name = csv_name.substr(0, csv_name.size() - 4) + "_dft.csv";
 
+
+    // Output of parsing songs represented as vectors
     vector<complex<double>> output = getDataFromWav(file_name);     
-    // Add a timer to test for parallelism
-    // Add a barrier if needed
-    transformSignal(output); // Ensure that output size is a power of 2
-    vector<complex<double>> iterative_out(output.size());
-    START_TIMER(fft);
-    // fft(output);
-    iterative_fft(output, iterative_out, log2(output.size()));
+    vector<complex<double>> output_dft;
 
+
+
+    copy(output.begin(),output.end(), back_inserter(output_dft));
+
+    transformSignal(output); // Ensure that output size is a power of 2
+    transformSignal(output_dft);
+
+
+    // Post signal processing of songs output vectors
+    vector<complex<double>> iterative_out(output.size());
+    vector<complex<double>> dft_out(output.size());
+
+    // Spawn and time serial fft function
+    START_TIMER(fft);
+    iterative_fft(output, iterative_out, log2(output.size()));
     STOP_TIMER(fft);
+
+
+    // Spawn and time serial dft function
+    START_TIMER(dft);
+    dft(output_dft, dft_out);
+    STOP_TIMER(dft);
     
     // Serial for now - TODO: Add OMP def
-    printf("Thread Count: %d - FFT Type: Misc for now - FFT Time: %lfs\n", thread_count, GET_TIMER(fft));
+    printf("Serial  - Transform Type:  FFT - Time: %lfs\n", GET_TIMER(fft));
+    printf("Serial  - Transform Type:  DFT - Time: %lfs\n", GET_TIMER(dft));
     writeDataToCSVFile(iterative_out, csv_name);
+    writeDataToCSVFile(dft_out, dft_csv_name);
     // writeDataToCSVFile(output, "recursive_" + csv_name);
-
     return EXIT_SUCCESS;
 }
