@@ -11,30 +11,13 @@
 #include <complex>
 #include <cmath>
 #include <fstream>
-//#include <bits/stdc++.h>
 #include <string>
+#include <limits>
 
 #include <cuComplex.h>
-//typedef complex<double> cd;
 
 #include "timer.h"
 using namespace std;
-
-// Not sure if this needs to be used yet
-struct complexD{
-    double real;
-    double imag;
-
-    __device__ complexD(double r, double i): real(r), imag(i){}
-    __device__ complexD operator*(complexD& a){
-        return complexD(real * a.real - imag * a.imag, imag * a.real + real * a.imag);
-    }
-    __device__ complexD operator+(complexD& a){
-        return complexD(real + a.real, imag + a.imag);
-    }
-};
-
-//typedef complexD cd;
 
 struct WAV_HEADER{
     // Riff
@@ -151,15 +134,17 @@ vector<cuDoubleComplex> getDataFromWav2(const std::string &file_path){
     return convertWavDataToComplexVector2(data);
 }
 
-void dft(vector<complex<double>> signal,vector<complex<double>>& output){
-    for(uint64_t k = 0; k < signal.size(); k++){
-        complex<double> ans(0,0);
-        for(uint64_t t = 0; t < signal.size(); t++){
-            double angle = (-2 * M_PI * t * k) / signal.size(); 	
-            ans += signal[t] * exp(complex<double>(0,angle));
-        }
-        output.push_back(ans);
+__global__ void dft_kernal(const cuDoubleComplex* a, cuDoubleComplex* A, unsigned int N) {
+    int i = threadIdx.x + blockIdx.x * blockDim.x;
+    cuDoubleComplex sum = make_cuDoubleComplex(0.0, 0.0);
+
+    for (int j = 0; j < N; j++){
+        double angle = 2.0 * 3.1415926535 * i * j / N;
+        cuDoubleComplex term = make_cuDoubleComplex(cos(angle), sin(angle));
+        sum = cuCadd(sum, cuCmul(A[j], term));
     }
+
+    A[i] = sum;
 }
 
 
@@ -249,8 +234,8 @@ __global__ void iterative_fft_kernel(const cuDoubleComplex* a, cuDoubleComplex* 
         int j = threadIdx.x % m2;
         int k = threadIdx.x / m2 * m;
 
-        float tempr;
-        float tempi;
+        double tempr;
+        double tempi;
 
         //Puts the sin into tempi and cos into tempr
         //Idea came from the relationship between sin and cos and exp functions
@@ -331,18 +316,18 @@ int writeDataToCSVFile(const vector<complex<double>>& out, const string fileName
     ofstream outFile(fileName);
     outFile << "x,y" << "\n";
     int count = 0;
-//    double max_real = numeric_limits<double>::min();
-//    double max_imag = numeric_limits<double>::min();
+    double max_real = numeric_limits<double>::min();
+    double max_imag = numeric_limits<double>::min();
     for(complex<double> i : out){
         count++;
         outFile << i.real() << "," << i.imag() << "\n";
 
-//        if (i.real() > max_real){
-//            max_real = i.real();
-//        } 
-//        if (i.imag() > max_imag){
-//            max_imag = i.imag();
-//        }
+        if (i.real() > max_real){
+            max_real = i.real();
+        } 
+        if (i.imag() > max_imag){
+            max_imag = i.imag();
+        }
     }
 
     outFile.close();
@@ -364,8 +349,8 @@ int writeDataToCSVFile(cuDoubleComplex* out, int outsize,const string fileName =
     ofstream outFile(fileName);
     outFile << "x,y" << "\n";
     int count = 0;
-  //  double max_real = numeric_limits<double>::min();
-   // double max_imag = numeric_limits<double>::min();
+    double max_real = numeric_limits<double>::min();
+    double max_imag = numeric_limits<double>::min();
     for(int i = 0; i < outsize; i++){
         count++;
         outFile << out[i].x << "," << out[i].y << "\n";
@@ -401,33 +386,22 @@ int main(int argc,const char** argv){
     std::string file_name = argv[1];
     std::string csv_name  = argv[2];
 
-   // vector<complex<double>> output = getDataFromWav(file_name);    
-    vector<cuDoubleComplex> output = getDataFromWav2(file_name);    
-    transformSignal(output); // Ensure that output size is a power of 2
+    // Get the output of the wav file
+    vector<cuDoubleComplex> wavData = getDataFromWav2(file_name);    
+    transformSignal(wavData); // Ensure that wavData size is a power of 2
 
     // Convert the vector to array, yes I know not optimal
-    cuDoubleComplex in[output.size()];
-    copy(output.begin(),output.end(), in);
+    cuDoubleComplex in[wavData.size()];
+    copy(wavData.begin(),wavData.end(), in);
 
-    // Add a timer to test for parallelism
-    // Add a barrier if needed
-    // vector<complex<double>> iterative_out(output.size());
+    // Init our 
     cuDoubleComplex* out;
-    out = (cuDoubleComplex*)calloc(output.size(),sizeof(cuDoubleComplex));
+    out = (cuDoubleComplex*)calloc(wavData.size(),sizeof(cuDoubleComplex));
     
-    int log2n = log2(output.size());
-    // Init Cuda stuff
-    // START_TIMER(fft);
-    // fft(output);
-    // for (unsigned int i = 0; i < output.size(); ++i) {
-    //         out[i] = in[bit_reversal(i, log2n)];
-    //     }
-    fft_cuda(in, out, log2n, output.size());
-    // STOP_TIMER(fft);
+    int log2n = log2(wavData.size());
+    fft_cuda(in, out, log2n, wavData.size());
     
-    // Serial for now - TODO: Add OMP def
-    writeDataToCSVFile(out, output.size(), csv_name);
-    // writeDataToCSVFile(output, "recursive_" + csv_name);
+    writeDataToCSVFile(out, wavData.size(), csv_name);
     free(out);
 
     return EXIT_SUCCESS;
