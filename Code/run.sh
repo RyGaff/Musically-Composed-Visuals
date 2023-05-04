@@ -3,6 +3,13 @@
 #get the input wav file
 inputwav=$1
 
+cd fft-sample/
+make
+cd ..
+cd visuals/
+make
+cd ..
+
 echo $inputwav
 #Run the ffts
 echo Running fft/dft:

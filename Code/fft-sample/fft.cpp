@@ -281,7 +281,7 @@ int writeDataToCSVFile(const vector<complex<double>>& out, const string fileName
     outFile.close();
 
     // plotOutputData();
-    // normalizeCSVFile(out, max_real, max_imag, fileName);
+    normalizeCSVFile(out, max_real, max_imag, fileName);
     return count;
 }
 
