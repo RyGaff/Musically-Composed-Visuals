@@ -151,16 +151,6 @@ vector<cuDoubleComplex> getDataFromWav2(const std::string &file_path){
     return convertWavDataToComplexVector2(data);
 }
 
-void dft(vector<complex<double>> signal,vector<complex<double>>& output){
-    for(uint64_t k = 0; k < signal.size(); k++){
-        complex<double> ans(0,0);
-        for(uint64_t t = 0; t < signal.size(); t++){
-            double angle = (-2 * M_PI * t * k) / signal.size(); 	
-            ans += signal[t] * exp(complex<double>(0,angle));
-        }
-        output.push_back(ans);
-    }
-}
 
 
 /*
@@ -212,8 +202,6 @@ void transformSignal(vector<cuDoubleComplex>& signal){
     }
 }
 
-
-
 // https://en.wikipedia.org/wiki/Cooley%E2%80%93Tukey_FFT_algorithm
 // cd is a complex double
 /*
@@ -231,6 +219,26 @@ __device__ unsigned int bit_reversal(unsigned int i, int log2n){
     }
     return rev;
 }
+
+__global__ void dft_kernal(const cuDoubleComplex* a, cuDoubleComplex* A, unsigned int N) {
+    int output_index = 0;
+    int index = blockIdx.x * blockDim.x + threadIdx.x;
+    int stride = blockDim.x * gridDim.x;
+    __syncthreads();
+    for(uint64_t k = index; k < N; k += stride) {
+        cuDoubleComplex ans = make_cuDoubleComplex(0, 0);
+        for(uint64_t t = 0; t < N; t++){
+            double angle = (-2 * M_PI * t * k) / N;
+            double e_angle = exp(angle);
+            ans = cuCadd(ans, cuCmul(a[t], make_cuDoubleComplex(1,e_angle)));
+            __syncthreads();
+        }
+        A[k] = ans;
+        output_index++;
+        __syncthreads();
+    }
+}
+
 /*
  * My brain hurts
  */
@@ -259,6 +267,7 @@ __global__ void iterative_fft_kernel(const cuDoubleComplex* a, cuDoubleComplex* 
         __syncthreads();
     }
 }
+
 /*
  * Handles the cuda operations and calls iterative_fft_kernel
  */
@@ -273,9 +282,8 @@ int fft_cuda(const cuDoubleComplex* a, cuDoubleComplex* A, int log2n, unsigned i
 
     //Just putting this here for now dont feel like making testsing stuff atm
     //Just gets the max amount of threads possible given the cuda device
-    cudaDeviceProp properties;
-    cudaGetDeviceProperties(&properties, 0);
-    // int block_size = min(size, properties.maxThreadsPerBlock);
+    cudaDeviceProp properties;    cudaGetDeviceProperties(&properties, 0);
+    
     int block_size;
     int min_block_size;
     cudaOccupancyMaxPotentialBlockSize(&min_block_size, &block_size, iterative_fft_kernel, 0, N);
@@ -283,12 +291,47 @@ int fft_cuda(const cuDoubleComplex* a, cuDoubleComplex* A, int log2n, unsigned i
 
     START_TIMER(fft)
     iterative_fft_kernel<<<block_count, block_size>>>(a0, A0, log2n);
+    cudaDeviceSynchronize();
     STOP_TIMER(fft)
 
-    cudaDeviceSynchronize();
     cudaMemcpy(A, A0, sizeof(cuDoubleComplex)* N, cudaMemcpyDeviceToHost);
     
-    printf("Thread Count: %d - FFT Type: Misc for now - FFT Time: %lfs\n", thread_count, GET_TIMER(fft));
+    printf("Parallel CUDA - Transform Type: FFT - Time: %lfs\n", GET_TIMER(fft));
+    cudaFree(a0);
+    cudaFree(A0);
+
+    return 0;
+}
+
+/*
+ * Handle dft CUDA operations
+ */
+int dft_cuda(const cuDoubleComplex* a, cuDoubleComplex* A, unsigned int N){
+    // Allocate memory on the cuda device
+    cuDoubleComplex* a0;
+    cuDoubleComplex* A0;
+    cudaMalloc((void **)&a0, sizeof(cuDoubleComplex) * N);
+    cudaMalloc((void **)&A0, sizeof(cuDoubleComplex) * N);
+    
+    cudaMemcpy(a0, a, sizeof(cuDoubleComplex) * N, cudaMemcpyHostToDevice);
+
+    //Just putting this here for now dont feel like making testsing stuff atm
+    //Just gets the max amount of threads possible given the cuda device
+    cudaDeviceProp properties;    cudaGetDeviceProperties(&properties, 0);
+    
+    int block_size;
+    int min_block_size;
+    cudaOccupancyMaxPotentialBlockSize(&min_block_size, &block_size, dft_kernal, 0, N);
+    int block_count = (N + block_size -1)/block_size;
+
+    START_TIMER(dft)
+    dft_kernal<<<block_count, block_size>>>(a0, A0, N);
+    cudaDeviceSynchronize();
+    STOP_TIMER(dft)
+
+    cudaMemcpy(A, A0, sizeof(cuDoubleComplex)* N, cudaMemcpyDeviceToHost);
+    
+    printf("Parallel CUDA - Transform Type: DFT - Time: %lfs\n", GET_TIMER(dft));
     cudaFree(a0);
     cudaFree(A0);
 
@@ -302,14 +345,6 @@ void plotOutputData(){
     system("python3 ./python-stuffs/plotter.py");
 }
 
-// void normalizeCSVFile(const vector<cd>& out, double max_real, double max_imag, const string fileName = "coords.csv"){
-//     ofstream outFile("normalized_" + fileName);
-//     for (complex<double> i : out){
-//         outFile << i.real()/max_real << "," << i.imag()/max_imag << "\n";
-//     }
-//     outFile.close();
-
-// }
 /*
  * Write data to a CSV file
  *
@@ -355,7 +390,7 @@ int writeDataToCSVFile(cuDoubleComplex* out, int outsize,const string fileName =
     ofstream outFile(fileName);
     outFile << "x,y" << "\n";
     int count = 0;
-  //  double max_real = numeric_limits<double>::min();
+   // double max_real = numeric_limits<double>::min();
    // double max_imag = numeric_limits<double>::min();
     for(int i = 0; i < outsize; i++){
         count++;
@@ -376,11 +411,7 @@ int writeDataToCSVFile(cuDoubleComplex* out, int outsize,const string fileName =
     return count;
 }
 
-
-
-
 int main(int argc,const char** argv){
-
     cin.tie(0);
 
     // Read input file
@@ -391,35 +422,34 @@ int main(int argc,const char** argv){
 
     std::string file_name = argv[1];
     std::string csv_name  = argv[2];
+    std::string dft_csv_name = csv_name.substr(0, csv_name.size() - 4) + "_dft.csv";
 
-   // vector<complex<double>> output = getDataFromWav(file_name);    
     vector<cuDoubleComplex> output = getDataFromWav2(file_name);    
     transformSignal(output); // Ensure that output size is a power of 2
 
     // Convert the vector to array, yes I know not optimal
-    cuDoubleComplex in[output.size()];
-    copy(output.begin(),output.end(), in);
+    cuDoubleComplex fft_in[output.size()];
+    cuDoubleComplex dft_in[output.size() * 2];
+    copy(output.begin(),output.end(), fft_in);
+    copy(output.begin(),output.end(), dft_in);
 
-    // Add a timer to test for parallelism
-    // Add a barrier if needed
-    // vector<complex<double>> iterative_out(output.size());
-    cuDoubleComplex* out;
-    out = (cuDoubleComplex*)calloc(output.size(),sizeof(cuDoubleComplex));
+    cuDoubleComplex* fft_out;
+    fft_out = (cuDoubleComplex*)calloc(output.size(),sizeof(cuDoubleComplex));
+    cuDoubleComplex* dft_out;
+    dft_out = (cuDoubleComplex*)calloc(output.size(),sizeof(cuDoubleComplex));
     
     int log2n = log2(output.size());
-    // Init Cuda stuff
-    // START_TIMER(fft);
-    // fft(output);
-    // for (unsigned int i = 0; i < output.size(); ++i) {
-    //         out[i] = in[bit_reversal(i, log2n)];
-    //     }
-    fft_cuda(in, out, log2n, output.size());
-    // STOP_TIMER(fft);
+
+    fft_cuda(fft_in, fft_out, log2n, output.size());
+
+    dft_cuda(dft_in, dft_out, output.size());
+
     
     // Serial for now - TODO: Add OMP def
-    writeDataToCSVFile(out, output.size(), csv_name);
-    // writeDataToCSVFile(output, "recursive_" + csv_name);
-    free(out);
+    writeDataToCSVFile(fft_out, output.size(), csv_name);
+    writeDataToCSVFile(dft_out, output.size(), dft_csv_name);
+    free(fft_out);
+    free(dft_out);
 
     return EXIT_SUCCESS;
 }
