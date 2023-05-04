@@ -377,6 +377,15 @@ int writeDataToCSVFile(const vector<complex<double>>& out, const string fileName
     return count;
 }
 
+void normalizeCSVFile(cuDoubleComplex* out, double max_real, double max_imag, string fileName, int N){
+    ofstream outFile("normalized_" + fileName);
+    for (int i = 0; i < N; i++){
+        outFile << out[i].x/max_real << "," << out[i].y/max_imag << "\n";
+    }
+    outFile.close();
+
+}
+
 /*
  * Write data to a CSV file
  *
@@ -384,28 +393,30 @@ int writeDataToCSVFile(const vector<complex<double>>& out, const string fileName
  * 
  * Return: The number of complex numbers ie number of lines, will make wrapping with the visalizer easier
  */
-int writeDataToCSVFile(cuDoubleComplex* out, int outsize,const string fileName = "coords.csv"){
+int writeDataToCSVFile(cuDoubleComplex* out, int N, const string fileName = "coords.csv", bool norm = true){
 
     ofstream outFile(fileName);
     outFile << "x,y" << "\n";
     int count = 0;
     double max_real = numeric_limits<double>::min();
     double max_imag = numeric_limits<double>::min();
-    for(int i = 0; i < outsize; i++){
+    for(int i = 0; i < N; i++){
         count++;
         outFile << out[i].x << "," << out[i].y << "\n";
-        if (out[i].x > max_real){
-           max_real = out[i].x;
-        } 
-        if (out[i].y > max_imag){
-            max_imag = out[i].y;
+        if (norm){
+         if (out[i].x > max_real){
+            max_real = out[i].x;
+         } 
+         if (out[i].y > max_imag){
+             max_imag = out[i].y;
+         }
         }
     }
 
     outFile.close();
 
     // plotOutputData();
-    // normalizeCSVFile(out, max_real, max_imag, fileName);
+    if (norm) {normalizeCSVFile(out, max_real, max_imag, fileName, N);}
     return count;
 }
 
@@ -418,6 +429,8 @@ int main(int argc,const char** argv){
 	exit(EXIT_FAILURE);
     }
 
+    // TO DO: add flags for debug mode - Debug mode doesn't remove csvs, and does not normalize data
+    
     std::string file_name = argv[1];
     std::string csv_name  = argv[2];
     std::string dft_csv_name = csv_name.substr(0, csv_name.size() - 4) + "_dft.csv";

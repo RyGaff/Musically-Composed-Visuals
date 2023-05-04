@@ -1,7 +1,9 @@
 #include "gl_helper.h"
 #include "cuda.h"
 #include "cuda_gl_interop.h"
+#include <stdio.h>
 #include <string.h>
+
 
 PFNGLBINDBUFFERARBPROC    glBindBuffer     = NULL;
 PFNGLDELETEBUFFERSARBPROC glDeleteBuffers  = NULL;
@@ -63,6 +65,7 @@ struct GPUAnimBitmap {
 
         glBindBuffer( GL_PIXEL_UNPACK_BUFFER_ARB, 0 );
         glDeleteBuffers( 1, &bufferObj );
+        fcloseall(); 
     }
 
     void anim_and_exit( void (*f)(uchar4*,void*), void(*e)(void*) ) {

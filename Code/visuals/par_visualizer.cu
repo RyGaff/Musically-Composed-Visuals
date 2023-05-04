@@ -28,12 +28,14 @@ int Step_To_Seek = 0;
 unsigned int frames = 0;
 char *read_from_file;
 double t = 0.0;
+FILE *fp;
+int charcount = 0;
 
 
 void key_listener(unsigned char key, int x, int y);
 void arrow_listener(int key, int x, int y);
 void print_stats(float render_time);
-double *csv_to_array(char *file);
+double *csv_to_array(FILE *fp);
 
 __global__ void julia(uchar4 *pixels, int max_iterations,
                       double cRe, double cIm, double mX, double mY, double zoom)
@@ -87,7 +89,7 @@ void generateFrame(uchar4 *ptr)
         t = clock();
         double delta_time = (t - old_time)/CLOCKS_PER_SEC;
         double *buf;
-        buf = csv_to_array(read_from_file);
+        buf = csv_to_array(fp);
     
         cRe =  (cRe + (.001 * atan(buf[1]))) + 0.001 *  tan(delta_time);
         cIm =  (cIm + (.01  * atan(buf[0]))) + 0.0001 * tan(delta_time); 
@@ -110,12 +112,25 @@ int main(int argc, char* argv[])
         exit(1);
     }
 
-    read_from_file = argv[1];
+    if (!fp){
+        fp = fopen(argv[1], "r");
+        if (!fp)
+        {
+            puts("Failed to open file");
+            exit(EXIT_FAILURE);
+        }
+        for (char c = getc(fp); c != EOF; c = getc(fp)){
+            charcount++;        
+        }
+
+        fseek(fp, 0, SEEK_SET);
+    }
 
     GPUAnimBitmap bitmap(block, block, NULL);
     bitmap_Ptr = &bitmap;
 
     t = time(0);
+    // File and resources are cleaned up in the exit function located in the header file
     bitmap.anim_and_exit((void (*)(uchar4 *, void *))generateFrame, NULL);
     glutKeyboardFunc(key_listener);
     glutSpecialFunc(arrow_listener);
@@ -214,16 +229,9 @@ void print_stats(float render_time)
     printf("    Camera: pos = %f, %f   zoom = %f\n", mx, my, zoom);
 }
 
-double *csv_to_array(char *file)
+double *csv_to_array(FILE *fp)
 {
     static double ret[2];
-    FILE *fp;
-    fp = fopen(file, "r");
-    if (!fp)
-    {
-        puts("File Not Found");
-        exit(EXIT_FAILURE);
-    }
 
     fseek(fp, Step_To_Seek, SEEK_SET);
     char *token;
@@ -241,7 +249,7 @@ double *csv_to_array(char *file)
         i += 1;
     }
 
-    Step_To_Seek = (len + Step_To_Seek) % 4126;
+    Step_To_Seek = (len + Step_To_Seek) % charcount;
 
     return ret;
 }

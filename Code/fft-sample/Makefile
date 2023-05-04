@@ -11,4 +11,4 @@ fft-par: fft.cpp
 	nvcc -o fft-par fft.cu
 
 clean:
-	rm -f $(TARGET)
+	rm -f $(TARGET) *.csv
