@@ -1,4 +1,5 @@
 #include "par_visualizer.h"
+#include <cstdio>
 // Init our animation bitmap.
 // This is where most of the opengl and cuda interop stuff is.
 GPUAnimBitmap *bitmap_Ptr;
@@ -75,6 +76,7 @@ void generateFrame(uchar4 *ptr)
 {
     dim3 grids(block / 16, block / 16);
     dim3 threads(16, 16);
+
     if (animation == 1)
     {
         double old_time = t;
@@ -103,7 +105,8 @@ void generateFrame(uchar4 *ptr)
             bitmap_Ptr->free_resources();
             exit(0);
         } else {
-            printf("\nRemaining frames to generate %d\t\tmintime = %lf\n", 50 - frames++, mintime);
+            printf("Remaining frames to generate %d\t\tmintime = %lf", 50 - frames++, mintime);
+        
         }
     } 
 //    print_stats(GET_TIMER(julia));
@@ -111,9 +114,9 @@ void generateFrame(uchar4 *ptr)
 
 int main(int argc, char* argv[])
 {
-    if (argc != 3){
-        printf("Usage: ./par_vis <1 for continuous> <csv file>");   
-        printf("if the first argument is anything else the program stops after 50 frames are generated");
+    if (argc < 3 || argc > 4){
+        printf("Usage: ./par_vis <1 for continuous> <csv file> <OPTIONAL: Number of iterations>");   
+        printf("\nif the first argument is anything else the program stops after 50 frames are generated");
         exit(1);
     }
 
@@ -133,6 +136,10 @@ int main(int argc, char* argv[])
         fseek(fp, 0, SEEK_SET);
     }
 
+    if (argc == 4){
+        sscanf(argv[3], "%d", &max_iterations);
+    }
+
     GPUAnimBitmap bitmap(block, block, NULL);
     bitmap_Ptr = &bitmap;
 
@@ -149,9 +156,9 @@ void key_listener(unsigned char key, int x, int y)
     switch (key)
     {
     case 'q':
+        printf("Frame gen times: mintime = %lf", mintime);
         // Free our buffers and cuda mem
         bitmap_Ptr->free_resources();
-        printf("\nMin Frame time for parallel version %lf\n", mintime);
         exit(0);
         break;
     case 'w':

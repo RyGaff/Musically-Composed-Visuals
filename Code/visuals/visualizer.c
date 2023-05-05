@@ -33,14 +33,14 @@ char *stop;
 
 int main( int argc, char** argv )
 {
-    if (argc != 3){
-        printf("Usage: ./vis <1 for continuous> <csv file>");   
-        printf("if the first argument is anything else the program stops after 50 frames are generated");
+
+    if (argc < 3 || argc > 4){
+        printf("Usage: ./par_vis <1 for continuous> <csv file> <OPTIONAL: Number of iterations>");   
+        printf("\nif the first argument is anything else the program stops after 50 frames are generated");
         exit(1);
     }
-
+    
     stop = argv[1];
-
 
     if (!fp){
         fp = fopen(argv[2], "r");
@@ -54,6 +54,10 @@ int main( int argc, char** argv )
         }
 
         fseek(fp, 0, SEEK_SET);
+    }
+
+    if (argc == 4){
+        sscanf(argv[3], "%d", &max_iterations);
     }
 
     pixels = calloc(width * height * 4, sizeof(pixels));
@@ -142,13 +146,14 @@ void display()
         mintime = GET_TIMER(julia);
     }
     
+    
     if(strcmp(stop, "1") != 0){
         if (frames == 50){
             printf("Min Frame time for parllel version %lf\n", mintime);
             free(pixels);
             exit(0);
         } else {
-            printf("\nRemaining frames to generate %d\t\tmintime = %lf\n", 50 - frames++, mintime);
+            printf("Remaining frames to generate %d\t\tmintime = %lf\n", 50 - frames++, mintime);
         }
     } 
 
@@ -158,7 +163,7 @@ void display()
 void key_listener(unsigned char key, int x, int y){
     switch(key){
         case 'q':
-            printf("\nMin Frame time for serial version %lf\n", mintime);
+            printf("Frame gen times: mintime = %lf\n", mintime);
             free(pixels);
             exit(0);
             break;
