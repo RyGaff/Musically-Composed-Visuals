@@ -1,4 +1,4 @@
-default: main par_vis
+default: clean main par_vis 
 
 main: visualizer.c
 	gcc -o vis visualizer.c -lm -lglut -lGLU -lGL
