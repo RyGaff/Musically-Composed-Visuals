@@ -1,5 +1,6 @@
 #include "visualizer.h"
 //#include <cstring>
+#include <bits/types/struct_timeval.h>
 #include <stdio.h>
 // Array to hold our pixels. To be used with glDrawPixels
 float *pixels;
@@ -30,6 +31,7 @@ double t = 0.0;
 unsigned int frames = 0;
 double mintime = 999999.0;
 char *stop;
+double starttime = 0;
 
 int main( int argc, char** argv )
 {
@@ -137,6 +139,9 @@ void display()
     glClearColor(0.0, 0.0, 0.0, 1.0);
     glClear( GL_COLOR_BUFFER_BIT );
     glDrawPixels(width, height, GL_RGBA, GL_FLOAT, pixels);
+    if (frames == 1 && strcmp(stop, "1") != 0) START_TIMER(timeactive);
+    
+
     
     START_TIMER(julia);
     julia(zoom, mx, my);
@@ -148,8 +153,11 @@ void display()
     
     
     if(strcmp(stop, "1") != 0){
+            starttime = GET_TIMER(timeactive) - starttime;
         if (frames == 50){
-            printf("Min Frame time for parllel version %lf\n", mintime);
+            STOP_TIMER(timeactive);
+            printf("Min Frame time for parllel version = %lf\n", mintime);
+            printf("Time active = %lf\n", starttime);
             free(pixels);
             exit(0);
         } else {

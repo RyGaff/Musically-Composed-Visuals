@@ -29,7 +29,7 @@ FILE *fp;
 int charcount = 0;
 char *stop;
 double mintime = 99999;
-
+double starttime = 0;
 __global__ void julia(uchar4 *pixels, int max_iterations,
                       double cRe, double cIm, double mX, double mY, double zoom)
 {
@@ -90,6 +90,8 @@ void generateFrame(uchar4 *ptr)
         
     } 
 
+    if (frames == 1 && strcmp(stop, "1") != 0) START_TIMER(timeactive);
+
     START_TIMER(julia);
     julia<<<grids, threads>>>(ptr, max_iterations, cRe, cIm, mx, my, zoom);
     cudaDeviceSynchronize();
@@ -100,12 +102,15 @@ void generateFrame(uchar4 *ptr)
     }
 
     if(strcmp(stop, "1") != 0){
+            starttime = GET_TIMER(timeactive) - starttime;
         if (frames == 50){
-            printf("Min Frame time for parllel version %lf\n", mintime);
+            STOP_TIMER(timeactive);
+            printf("Min Frame time for parllel version = %lf\n", mintime);
+            printf("Time active = %lf\n", starttime);
             bitmap_Ptr->free_resources();
             exit(0);
         } else {
-            printf("Remaining frames to generate %d\t\tmintime = %lf", 50 - frames++, mintime);
+            printf("Remaining frames to generate %d\t\tmintime = %lf\n", 50 - frames++, mintime);
         
         }
     } 

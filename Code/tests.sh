@@ -24,7 +24,7 @@ echo PARALLEL:
 
 # Run serial or parallel visualizer based on arguments
 echo Starting iterations tests
-for iterations in 50 100 250 500 750 1000 2000:
+for iterations in 50 100 250 500 1000 2500 5000 10000:
 do
 echo SERIAL--$iterations:
 echo SERIAL--$iterations: >> serial_$output
