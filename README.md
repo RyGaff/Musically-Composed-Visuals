@@ -2,7 +2,7 @@
 Draft: https://youtu.be/gugts8mUX-U
 Final: https://youtu.be/POcOWgQ5GfU
 
-#Snipits from the final writeup
+# Snipits from the final writeup
 # Team
 
 Justin Choi, Ryan Gaffney, Ian Lips, Matt Dim
