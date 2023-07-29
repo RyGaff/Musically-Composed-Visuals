@@ -16,13 +16,14 @@ processing). There are already ways of breaking music into components
 through fourier. These components would split songs into components such
 as basslines, vocals, accompaniment, etc.
 
+
+# Overview
+  The first aspect of our project is our audio processing. We perform FFT and DFT on a wav file in order to compress the information from the audio into a csv format. We then use that csv as an input into our visualizer to generate images throughout the audio. Our csv data consists of the frame by frame frequencies of the audio and stores its instances (Figure CSV GRAPH). We then generate images using OpenGL, utilizing the julia set to create fractals. With the frame by frame frequencies stored in our csv, we create and cycle through a multitude of generated images to create an animated julia set, where each frame corresponds to its audio counterpart. Our goal with this project was to parallelize FFT, DFT, and the Julia fractal. We wanted to ensure speed up while maintaining 100% accuracy on FFT, and DFT. To parallelize these we had to actually change how some of the math worked because of limitations with cuda, which we will build upon later in the writeup. On the julia fractal our focus was all about speed, while still keeping the Julia fractal intact of course. Since the julia fractal was just being used to visualize the FFT or DFT we didn’t entirely care if something was slightly off. As a result the whole focus there was speed. 
+
   ---------------------------- ---------------------------- ---------------------------- -- -- --
 # Polynomial Julia Set images
   ![image](/Latex/imgs/image1.png)    ![image](/Latex/imgs/image2.png)   ![image](/Latex/imgs/image3.png)        
   ---------------------------- ---------------------------- ---------------------------- -- -- --
-
-# Overview
-  The first aspect of our project is our audio processing. We perform FFT and DFT on a wav file in order to compress the information from the audio into a csv format. We then use that csv as an input into our visualizer to generate images throughout the audio. Our csv data consists of the frame by frame frequencies of the audio and stores its instances (Figure CSV GRAPH). We then generate images using OpenGL, utilizing the julia set to create fractals. With the frame by frame frequencies stored in our csv, we create and cycle through a multitude of generated images to create an animated julia set, where each frame corresponds to its audio counterpart. Our goal with this project was to parallelize FFT, DFT, and the Julia fractal. We wanted to ensure speed up while maintaining 100% accuracy on FFT, and DFT. To parallelize these we had to actually change how some of the math worked because of limitations with cuda, which we will build upon later in the writeup. On the julia fractal our focus was all about speed, while still keeping the Julia fractal intact of course. Since the julia fractal was just being used to visualize the FFT or DFT we didn’t entirely care if something was slightly off. As a result the whole focus there was speed. 
 
 # Components of our Project
 
