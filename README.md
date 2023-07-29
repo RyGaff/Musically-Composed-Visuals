@@ -1,3 +1,8 @@
+# Video Links
+Draft: https://youtu.be/gugts8mUX-U
+Final: https://youtu.be/POcOWgQ5GfU
+
+
 # Team
 
 Justin Choi, Ryan Gaffney, Ian Lips, Matt Dim
