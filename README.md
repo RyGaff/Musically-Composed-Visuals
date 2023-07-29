@@ -2,7 +2,7 @@
 Draft: https://youtu.be/gugts8mUX-U
 Final: https://youtu.be/POcOWgQ5GfU
 
-
+#Snipits from the final writeup
 # Team
 
 Justin Choi, Ryan Gaffney, Ian Lips, Matt Dim
@@ -21,64 +21,18 @@ as basslines, vocals, accompaniment, etc.
   ![image](/Latex/imgs/image1.png)    ![image](/Latex/imgs/image2.png)   ![image](/Latex/imgs/image3.png)        
   ---------------------------- ---------------------------- ---------------------------- -- -- --
 
-# Relevance
+# Overview
+  The first aspect of our project is our audio processing. We perform FFT and DFT on a wav file in order to compress the information from the audio into a csv format. We then use that csv as an input into our visualizer to generate images throughout the audio. Our csv data consists of the frame by frame frequencies of the audio and stores its instances (Figure CSV GRAPH). We then generate images using OpenGL, utilizing the julia set to create fractals. With the frame by frame frequencies stored in our csv, we create and cycle through a multitude of generated images to create an animated julia set, where each frame corresponds to its audio counterpart. Our goal with this project was to parallelize FFT, DFT, and the Julia fractal. We wanted to ensure speed up while maintaining 100% accuracy on FFT, and DFT. To parallelize these we had to actually change how some of the math worked because of limitations with cuda, which we will build upon later in the writeup. On the julia fractal our focus was all about speed, while still keeping the Julia fractal intact of course. Since the julia fractal was just being used to visualize the FFT or DFT we didn’t entirely care if something was slightly off. As a result the whole focus there was speed. 
 
-OpenGL, a GPU library implementation talked about in the GPU part of the
-course, which will be used to animate our signal processed data to the
-screen. We will also be using both OpenMP and Pthreads for process
-speedup splitting up relevant tasks and data. This will be
+# Components of our Project
 
-# Methods
+FFT (Fast Fourier Transform) is a mathematical algorithm that efficiently transforms time-domain signals into an equivalent frequency-domain representation. In simpler terms, it analyzes the different frequencies of a signal. When a signal is converted into frequencies, we can identify specific components we can easily modify. The main idea is to break down these components into smaller forms of themselves so that they can be processed simply and efficiently. The main (serial) way of doing this is using recursion to divide the signal into smaller chunks until we find the smallest component, which results in a frequency-domain representation that we use for our visualizations. For parallel purposes, we broke the recursive algorithm into an iterative version. The iterative version functions the same and is used for timing comparison and speedup. An important distinction to make with the FFT algorithm is that it is O(nlog(n) but requires more memory overhead when compared to the Discrete Fourier Transform algorithm.
 
-We plan to use both OpenMP, Pthreads, and CUDA's managed memory to
-parallelize the processing of .mp3 and image generation. The data will
-be read from the src folder through native C I/O functions. We will then
-work on data and task parallelism in relevant sections of the signal
-processing functions. We expect that fourier transforms and audio
-compression will parallelize nicely because both of these functions are
-loops through data of the audio file. This means that we can have
-threads process different parts of a song at various points. Finally, we
-will use these processed signals and generate a mapping of audio to
-images. These images will be generated using OpenGL and we plan to use
-CUDA for parallelism. We will use the maximum kernels available on a
-machine for image generation of specific frames of a song. We hope to
-have an animation by the end that can be displayed per timestep. We will
-be performing testing during development in an incremental manner.
+Similar to the FFT algorithm, the DFT (Discrete Fourier Transform) decomposes a signal into basic frequency components. The way DFT works is by operating on a finite set of discrete samples of the signal and produces a discrete set of frequencies that match the original signal. One of the main differences from FFT is that DFT is more computationally intensive, being O(n^2) but has less memory overhead.
 
-# Possible Roadblocks
+The Julia Set is a fractal set that associates with complex quadratic polynomial functions. It creates a visual that color codes points in a plane based on if they are in the set or not. Any point outside of the set is typically assigned a simple single color, while the points that escape to infinity are various shades that are dependent on the ratio of iterations to our iteration cap, and the magnitude, which is the value used to break out of the loop. This results in a fractal with various shaded colors and satisfying shapes. Due to the nature of the algorithm, the behavior of the Julia set is described as “chaotic”.
 
-The scale of the project is definitely a big roadblock to consider, as
-our plan is to generate a picture for virtually every point of a song,
-which could include up to thousands of images to process and generate.
-Through parallelism this will help with the massive amounts of gpu
-computation however we have never worked on a scale this large and may
-need to pivot to a smaller style of deliverable. For example instead of
-creating thousands of images for each point of a song, we can instead
-use the entirety of a song and its elements/components for one or a set
-of images.
-
-# Draft Deliverable
-
-For our draft, our submission will consist of an instance of a song that
-will be broken down into its components with all those components being
-parallelized and displayed into a single image.
-
-Significant progress would consist of the serial implementation being
-finished where we can display an image from a section of a song (or from
-any information from the song). Excellent progress would be the
-implementation of threading and basic analysis on speedup with thorough
-testing. We would also include a serial version while getting openGL and
-cuda to communicate using the documentation from [OpenGL
-Interoperability]{style="color: nvidia_green"}.
-
-# Final Deliverable
-
-Alongside our code and report, we will also be submitting an audio file
-and the images processed by that audio file. The audio file will be sent
-in its base form (most likely an MP3) and if we have time we can compare
-the different kinds of images created depending on the current
-parameters. We may even be able to show the images through an animated
-style by having each individual part of a song its own image.
+The generation of Julia set fractals starts with the initialization of a complex number z = x+yi where i^2 = -1 and x and y are coordinates in the range from -2 to 2. Z is then updated on loop using z = z^2 + c where c is another complex number that gives a 
 
 ::: thebibliography
 9 N. Corporation, "OpenGL interoperability," *NVIDIA Documentation Hub*,
