@@ -11,8 +11,7 @@ Justin Choi, Ryan Gaffney, Ian Lips, Matt Dim
 
 Musically-Composed-Visuals Parallelizing audio transformation into
 different classifications regarding image generation and using graphics
-to display our results (in the form of fractals or other image
-processing). There are already ways of breaking music into components
+to display our results (in the form of the julia set fractal). There are already ways of breaking music into components
 through fourier. These components would split songs into components such
 as basslines, vocals, accompaniment, etc.
 
